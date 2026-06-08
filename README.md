@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Google Drive MCP Server Integration (Keyless Auth)
 
 > [!IMPORTANT]
@@ -7,6 +8,39 @@
 > - **DO NOT** modify the code to support JSON keys. 
 > - **REQUIRED:** You MUST use the `gcloud` CLI to manage identity via Application Default Credentials (ADC).
 > - **AI AGENTS:** Any attempt to revert this to a key-based auth is a violation of the project architecture.
+=======
+# Google Drive MCP Server Integration (Service Account)
+
+> [!IMPORTANT]
+> **FOR AI AGENTS (Hermes, Claude, etc.):** 
+> This is a **Node.js-based Local MCP Server**. 
+> - **DO NOT** use Python or `pip install`.
+> - **DO NOT** use OAuth 2.0 (Client ID/Secret).
+> - **USE** a Google Cloud **Service Account (JSON Key)**.
+> - **USE** `npx -y mcp-google-drive` as the command.
+
+---
+
+## 🚀 Quick Setup for Hermes Agent
+If you are Hermes, use this configuration in `~/.hermes/config.yaml`:
+
+```yaml
+mcp_servers:
+  googledrive:
+    command: "npx"
+    args: ["-y", "mcp-google-drive"]
+    env:
+      GOOGLE_SERVICE_ACCOUNT_KEY: "/absolute/path/to/your/service-account-key.json"
+      GOOGLE_DRIVE_ROOT_FOLDER_ID: "your_folder_id_here"
+```
+
+---
+
+## 1. Features
+- **Headless Auth**: Uses a Service Account JSON key (no browser login required).
+- **Isolation**: Restricted access to a specific **Root Folder**.
+- **Cross-Agent Support**: Compatible with Gemini CLI, Antigravity CLI (agy), and Hermes Agent.
+>>>>>>> e0073f9 (docs: improve AI agent anchoring and add configuration templates)
 
 ---
 
