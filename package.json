@@ -1,0 +1,19 @@
+{
+  "name": "googledrive-mcp-server",
+  "version": "1.0.0",
+  "description": "Local Google Drive MCP Server Integration via Service Account",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "mcp",
+    "google-drive",
+    "service-account"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "latest"
+  }
+}
