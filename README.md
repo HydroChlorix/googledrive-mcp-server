@@ -109,3 +109,8 @@ mcp_servers:
 - **404 Errors**: Ensure the folder ID is correct and the Service Account has **Editor** permissions.
 - **Auth Errors**: Verify the path in `GOOGLE_SERVICE_ACCOUNT_KEY` is absolute and points to a valid JSON file.
 - **Binary vs Doc**: When reading Google Docs, always specify a export `mimeType` (e.g., `text/plain`).
+
+---
+
+## 6. License
+This project is licensed under the [MIT License](LICENSE).

@@ -4,45 +4,46 @@
 **Local Google Drive MCP Server Integration via Service Account for Gemini CLI**
 
 ## 1. Objective
-ต้องการเปลี่ยนผ่านสถาปัตยกรรมจากเดิมที่ใช้ Cloud-Hosted Remote MCP (ซึ่งติดข้อจำกัดด้าน User OAuth) มาเป็นการรัน **Local MCP Server** บนเครื่องคอมพิวเตอร์ผ่านการเรียกคำสั่ง (Command Execution) สำหรับ **Gemini CLI** โดยใช้ **Service Account (JSON Key)** ในการยืนยันตัวตน เพื่อให้ระบบสามารถทำงานได้แบบอัตโนมัติ (Headless/Autonomous Workflow) โดยไม่ต้องพึ่งพาการยืนยันตัวตนผ่านเว็บเบราว์เซอร์
+Transition the architecture from a Cloud-Hosted Remote MCP (limited by User OAuth) to a **Local MCP Server** running via command execution for **Gemini CLI**. The system will use a **Google Cloud Service Account (JSON Key)** for authentication to enable headless/autonomous workflows without requiring web browser-based verification.
 
 ## 2. Architecture & Components
-* **MCP Client:** Gemini CLI (รันอยู่ใน Local Environment เช่น Windows 11 หรือ Ubuntu WSL)
-* **Local MCP Server:** `mcp-google-drive` (ทำงานผ่าน Node.js Runtime)
-* **Authentication:** Google Cloud Service Account (JWT ผ่านไฟล์ Private Key JSON)
-* **Target API:** Standard Google Drive API v3 (ไม่ใช่ Drive MCP API แบบ Remote)
+* **MCP Client:** Gemini CLI (Running in a Local Environment such as Windows 11 or Ubuntu WSL).
+* **Local MCP Server:** `mcp-google-drive` (Running via Node.js Runtime).
+* **Authentication:** Google Cloud Service Account (JWT via a Private Key JSON file).
+* **Target API:** Standard Google Drive API v3 (Direct interaction, not via Remote Drive MCP API).
 
 ## 3. Core Functional Requirements (Skills/Tools)
-Gemini CLI ต้องสามารถเข้าถึงและใช้งานระบบจัดการไฟล์ผ่านเครื่องมือ (Tools) ทั้ง 4 ตัวนี้ได้อย่างสมบูรณ์แบบภายใต้โฟลเดอร์เป้าหมาย:
-1.  **`drive_search`**: ค้นหาไฟล์หรือโฟลเดอร์ภายในขอบเขตเพื่อดึง File ID หรือ Parent Folder ID
-2.  **`drive_read_file`**: อ่านเนื้อหา (Text/Data/Source) ภายในไฟล์เพื่อนำมาประมวลผล
-3.  **`drive_create_file`**: สร้างไฟล์ใหม่ลงในโฟลเดอร์ที่กำหนด (เช่น สรุปรายงานคอนเทนต์ หรือไฟล์ระบบ)
-4.  **`drive_update_file`**: แก้ไข หรือ เพิ่มเนื้อหาต่อท้าย (Append) ลงในไฟล์เดิม
+Gemini CLI must have full access to file management capabilities via these 4 core tools within the target folder scope:
+1.  **`search_files`** (PRD: `drive_search`): Search for files or folders to retrieve File IDs or Parent Folder IDs.
+2.  **`get_file_content`** (PRD: `drive_read_file`): Read file contents (Text/Data/Source) for processing.
+3.  **`create_file`** (PRD: `drive_create_file`): Create new files in a specified folder (e.g., summary reports or system files).
+4.  **`update_file`** (PRD: `drive_update_file`): Edit or append content to existing files.
 
 ## 4. Security & Access Control (Best Practices)
-* **Principle of Least Privilege:** บัญชีบริการ (Service Account) ต้อง **ไม่มีสิทธิ์ (No Roles) ใดๆ บน IAM ของ Google Cloud Console** เพื่อความปลอดภัยสูงสุด
-* **Data Isolation:** สิทธิ์การเข้าถึงจะถูกจำกัดผ่านกลไกการแชร์ (Google Drive Share Permission) โดยเจ้าของโฟลเดอร์ (Owner) จะต้องแชร์สิทธิ์ระดับ **Editor** ให้แก่อีเมลของ Service Account เฉพาะโฟลเดอร์ที่กำหนดเท่านั้น
+* **Principle of Least Privilege:** The Service Account must have **no IAM roles** in the Google Cloud Console for maximum security.
+* **Data Isolation:** Access is restricted via Google Drive sharing mechanisms. The folder owner must grant **Editor** permissions to the Service Account's email address only for the specific designated folders.
 
 ## 5. Configuration Requirements & Strict Constraints
 
-### ⚠️ [ข้อกำชับสำคัญที่สุด] เรื่อง Path Configuration
-* **ห้ามแก้ไขหรือเปลี่ยนแปลงโครงสร้าง Path เดิมที่มีอยู่แล้วในระบบเด็ดขาด** (ให้ใช้ Path เดิมที่เซ็ตอัปไว้แล้วในไฟล์คอนฟิกเดิม เนื่องจากระบบผ่านการแมปพาร์ทระหว่างสภาพแวดล้อม Windows และ WSL เรียบร้อยแล้ว)
-* ตัวแปรต้นทางสำหรับเรียกใช้ Credentials จะต้องชี้ไปยัง Path ของไฟล์ JSON Key เดิมอย่างถูกต้อง
+### ⚠️ [CRITICAL] Path Configuration
+* **Do not modify or change existing path structures.** Use the paths already set up in the system, as they are already mapped correctly between Windows and WSL environments.
+* The credentials variable must point accurately to the original JSON Key path.
 
-### 📄 Target Config Layout สำหรับ Gemini CLI
-เมื่อทำการเขียนหรือแก้ไขไฟล์ Configuration สำหรับ Gemini CLI ให้ปรับใช้โครงสร้างการรันด้วย `command` และส่งผ่าน Environment Variables ดังนี้:
+### 📄 Target Config Layout for Gemini CLI
+When writing or modifying the configuration for Gemini CLI, use the `command` execution structure and pass environment variables as follows:
 
 ```yaml
 mcpServers:
   googledrive:
-    # สำหรับ Gemini CLI ให้สั่งรัน Local Server ผ่าน npx
+    # Run the Local Server via npx for Gemini CLI
     command: "npx"
     args: 
       - "-y"
       - "mcp-google-drive"
     env:
-      # [CRITICAL] ห้ามเปลี่ยนค่า Path นี้ ให้ใช้ค่าเดิมของระบบที่ทำงานอยู่แล้ว
-      GOOGLE_APPLICATION_CREDENTIALS: "<ใช้_PATH_เดิม_ของ_ระบบ>"
+      # [CRITICAL] Do not change this path; use the existing system path.
+      GOOGLE_SERVICE_ACCOUNT_KEY: "/path/to/existing/credentials.json"
       
-      # โฟลเดอร์รากฐานที่แชร์สิทธิ์ให้ Service Account เรียบร้อยแล้ว
+      # Root folder ID shared with the Service Account.
       GOOGLE_DRIVE_ROOT_FOLDER_ID: "${GOOGLE_DRIVE_ROOT_FOLDER_ID}"
+```
