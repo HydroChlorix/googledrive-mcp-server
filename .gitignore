@@ -1,0 +1,22 @@
+# Credentials
+*.json
+!package.json
+!tsconfig.json
+!composer.json
+
+# Environment variables
+.env*
+
+# Node modules
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Gemini CLI local memory/temp
+.gemini/tmp/
+memory/
