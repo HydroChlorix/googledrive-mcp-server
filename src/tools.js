@@ -44,17 +44,23 @@ async function searchFiles(query, identity) {
  * @returns {string} The file content.
  */
 async function getFileContent(fileId, identity) {
+  const rootFolderId = process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID;
   console.error(`[Audit] User ${identity || 'Unknown'} executing get_file_content for fileId: ${fileId}`);
   
   const drive = await getDriveClient();
   
-  // First, get file metadata to check mimeType
+  // First, get file metadata to check mimeType and parents (ADR 0002)
   const metaRes = await drive.files.get({
     fileId: fileId,
-    fields: 'mimeType, name'
+    fields: 'mimeType, name, parents'
   });
   
   const mimeType = metaRes.data.mimeType;
+  const parents = metaRes.data.parents || [];
+
+  if (rootFolderId && !parents.includes(rootFolderId)) {
+    throw new Error('Access Denied: File is outside the designated Root Folder.');
+  }
   
   // ADR 0003: Auto-Text Export
   if (mimeType.startsWith('application/vnd.google-apps.')) {
@@ -117,13 +123,21 @@ async function createFile(name, content, mimeType = 'text/plain', identity) {
  * @returns {Object} The updated file metadata.
  */
 async function updateFile(fileId, content, identity) {
+  const rootFolderId = process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID;
   console.error(`[Audit] User ${identity || 'Unknown'} executing update_file for fileId: ${fileId}`);
 
   const drive = await getDriveClient();
   
-  // Note: While updating doesn't require parents to be specified,
-  // in a strict environment we might want to check if the file is in the root folder.
-  // We'll proceed with the update as Google Drive API handles permission scoping natively.
+  // ADR 0002: Verify file is in root folder before update
+  const metaRes = await drive.files.get({
+    fileId: fileId,
+    fields: 'parents'
+  });
+  
+  const parents = metaRes.data.parents || [];
+  if (rootFolderId && !parents.includes(rootFolderId)) {
+    throw new Error('Access Denied: File is outside the designated Root Folder.');
+  }
   
   const res = await drive.files.update({
     fileId: fileId,

@@ -67,29 +67,39 @@ describe('Tools', () => {
 
   describe('getFileContent', () => {
     it('should export Google Workspace files as text/plain (ADR 0003)', async () => {
-      mockDriveFilesGet.mockResolvedValueOnce({ data: { mimeType: 'application/vnd.google-apps.document', name: 'Doc' } });
+      process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID = 'root-123';
+      mockDriveFilesGet.mockResolvedValueOnce({ data: { mimeType: 'application/vnd.google-apps.document', name: 'Doc', parents: ['root-123'] } });
       mockDriveFilesExport.mockResolvedValueOnce({ data: 'workspace content' });
       
       const content = await getFileContent('file-123', 'user@example.com');
       
-      expect(mockDriveFilesGet).toHaveBeenCalledWith({ fileId: 'file-123', fields: 'mimeType, name' });
+      expect(mockDriveFilesGet).toHaveBeenCalledWith({ fileId: 'file-123', fields: 'mimeType, name, parents' });
       expect(mockDriveFilesExport).toHaveBeenCalledWith({ fileId: 'file-123', mimeType: 'text/plain' });
       expect(content).toBe('workspace content');
     });
 
+    it('should throw error if file is outside root folder (ADR 0002)', async () => {
+      process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID = 'root-123';
+      mockDriveFilesGet.mockResolvedValueOnce({ data: { mimeType: 'text/plain', name: 'File', parents: ['wrong-folder'] } });
+      
+      await expect(getFileContent('file-999', 'user@example.com')).rejects.toThrow('Access Denied: File is outside the designated Root Folder.');
+    });
+
     it('should get standard files directly using alt=media', async () => {
-      mockDriveFilesGet.mockResolvedValueOnce({ data: { mimeType: 'text/plain', name: 'File' } });
+      process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID = 'root-123';
+      mockDriveFilesGet.mockResolvedValueOnce({ data: { mimeType: 'text/plain', name: 'File', parents: ['root-123'] } });
       mockDriveFilesGet.mockResolvedValueOnce({ data: 'standard content' });
       
       const content = await getFileContent('file-456', 'user@example.com');
       
-      expect(mockDriveFilesGet).toHaveBeenNthCalledWith(1, { fileId: 'file-456', fields: 'mimeType, name' });
+      expect(mockDriveFilesGet).toHaveBeenNthCalledWith(1, { fileId: 'file-456', fields: 'mimeType, name, parents' });
       expect(mockDriveFilesGet).toHaveBeenNthCalledWith(2, { fileId: 'file-456', alt: 'media' });
       expect(content).toBe('standard content');
     });
 
     it('should log the operation with identity (ADR 0004)', async () => {
-      mockDriveFilesGet.mockResolvedValueOnce({ data: { mimeType: 'text/plain', name: 'File' } });
+      process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID = 'root-123';
+      mockDriveFilesGet.mockResolvedValueOnce({ data: { mimeType: 'text/plain', name: 'File', parents: ['root-123'] } });
       mockDriveFilesGet.mockResolvedValueOnce({ data: 'standard content' });
       
       await getFileContent('file-789', 'user@example.com');
@@ -115,17 +125,27 @@ describe('Tools', () => {
   });
 
   describe('updateFile', () => {
-    it('should update file content', async () => {
+    it('should update file content if in root folder', async () => {
+      process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID = 'root-123';
+      mockDriveFilesGet.mockResolvedValueOnce({ data: { parents: ['root-123'] } });
       mockDriveFilesUpdate.mockResolvedValueOnce({ data: { id: 'file-123' } });
       
       const result = await updateFile('file-123', 'new content', 'user@example.com');
       
+      expect(mockDriveFilesGet).toHaveBeenCalledWith({ fileId: 'file-123', fields: 'parents' });
       expect(mockDriveFilesUpdate).toHaveBeenCalledWith({
         fileId: 'file-123',
         media: { body: 'new content' },
         fields: 'id, name, modifiedTime'
       });
       expect(result.id).toBe('file-123');
+    });
+
+    it('should throw error if updating file outside root folder (ADR 0002)', async () => {
+      process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID = 'root-123';
+      mockDriveFilesGet.mockResolvedValueOnce({ data: { parents: ['wrong-folder'] } });
+      
+      await expect(updateFile('file-999', 'hack', 'user@example.com')).rejects.toThrow('Access Denied: File is outside the designated Root Folder.');
     });
   });
 });
