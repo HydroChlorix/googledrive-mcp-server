@@ -1,6 +1,7 @@
 # Credentials
 *.json
 !package.json
+!package-lock.json
 !tsconfig.json
 !composer.json
 
