@@ -10,15 +10,6 @@
 
 ---
 
-## 🚀 Quick Setup (Non-Negotiable)
-Before starting, you **MUST** configure Service Account Impersonation using the Google Cloud CLI. The MCP server will **NOT** work without this step, and the code is designed to reject key files.
-
-```bash
-gcloud auth application-default login --impersonate-service-account="<SERVICE_ACCOUNT_EMAIL>"
-```
-
----
-
 ## 1. Features
 - **Keyless Security**: No long-lived keys to manage or leak.
 - **Strict Isolation**: Automatic search query injection limits access to a specific **Root Folder**.
@@ -29,8 +20,8 @@ gcloud auth application-default login --impersonate-service-account="<SERVICE_AC
 
 ## 2. Prerequisites
 
-### A. Global Hard Requirement: Google Cloud CLI (`gcloud`)
-This repository **requires** `gcloud` to be installed and configured on the host machine (Ubuntu/WSL). We do not bundle or support traditional JSON keys.
+### A. Environment Setup
+This MCP server is designed to run in **Ubuntu/WSL**. Authentication requires the Google Cloud CLI (`gcloud`).
 
 #### Install gcloud CLI (Ubuntu/WSL)
 ```bash
@@ -52,7 +43,16 @@ sudo apt-get update && sudo apt-get install google-cloud-sdk
 
 ---
 
-## 2. Configuration (.env)
+## 3. Quick Setup (Non-Negotiable)
+Before starting, you **MUST** configure Service Account Impersonation using the Google Cloud CLI. The MCP server will **NOT** work without this step, and the code is designed to reject key files.
+
+```bash
+gcloud auth application-default login --impersonate-service-account="<SERVICE_ACCOUNT_EMAIL>"
+```
+
+---
+
+## 4. Configuration (.env)
 Create a `.env.googledrive` file to store your folder ID. **DO NOT** store key paths here.
 
 ```bash
@@ -62,7 +62,7 @@ GOOGLE_DRIVE_ROOT_FOLDER_ID="your_google_drive_folder_id"
 
 ---
 
-## 3. Installation & Setup by Agent
+## 5. Installation & Setup by Agent
 
 ### A. Gemini CLI
 1. Open or create `.gemini/config.json`.
@@ -98,7 +98,7 @@ mcp_servers:
 
 ---
 
-## 4. Available Tools
+## 6. Available Tools
 - `search_files`: Search limited to the Root Folder.
 - `list_files`: List files in the Root Folder.
 - `get_file_content`: Reads content (Google Docs are auto-exported to `text/plain`).
@@ -107,20 +107,20 @@ mcp_servers:
 
 ---
 
-## 5. Troubleshooting
+## 7. Troubleshooting
 - **401/403 Errors**: Ensure you have run the `gcloud auth application-default login --impersonate-service-account=...` command.
 - **Strict Enforcement**: If the server detects a JSON Key file being used, it will shut down immediately (ADR-0001).
 - **Isolation**: Search results are restricted via query injection (ADR-0002).
 
 ---
 
-## 6. License
-This project is licensed under the [MIT License](LICENSE).
-
----
-
-## 7. Verification
+## 8. Verification
 Run a smoke test with your AI agent:
 > **Prompt**: "List the most recent file in my Google Drive."
 
 If the agent returns a filename from your shared folder, the setup is successful.
+
+---
+
+## 9. License
+This project is licensed under the [MIT License](LICENSE).
