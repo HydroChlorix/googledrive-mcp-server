@@ -1,0 +1,3 @@
+- [x] Task 1: Project Setup and Dependencies
+- [x] Task 2: Implement Keyless Auth Client
+- [x] Task 3: Basic MCP Server Entrypoint
