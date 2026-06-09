@@ -9,34 +9,34 @@ A Google Cloud identity intended for automated workflows and server-to-server in
 The designated Google Drive folder (identified by `GOOGLE_DRIVE_ROOT_FOLDER_ID`) that serves as the isolated workspace for the MCP server. All operations are restricted to this folder and its sub-directories.
 
 ### Keyless Authentication
-สถาปัตยกรรมการยืนยันตัวตนที่ไม่ใช้ไฟล์ Private Key JSON โดยเปลี่ยนไปใช้ ADC (สำหรับ Local) หรือ WIF (สำหรับ Production) เพื่อเพิ่มความปลอดภัย และลดความเสี่ยง Credential หลุดรอด
+An authentication architecture that eliminates the use of Private Key JSON files. It relies on Application Default Credentials (ADC) for local environments or Workload Identity Federation (WIF) for production, enhancing security and mitigating credential leak risks.
 
 ### Service Account Impersonation
-กระบวนการที่ User (ผู้พัฒนา) ใช้สิทธิ์ของตัวเองเพื่อขอ Short-lived Access Token ในนามของ Service Account โดยต้องมีสิทธิ์ `roles/iam.serviceAccountTokenCreator`
+The process where a user (developer) leverages their own identity to request a short-lived access token on behalf of a Service Account. This requires the `roles/iam.serviceAccountTokenCreator` IAM role.
 
 ### Transparent ADC
-กลยุทธ์การใช้งาน Application Default Credentials โดยที่โค้ดของ MCP Server ไม่ต้องระบุอีเมล Service Account หรือโหลดไฟล์ Key โดยตรง แต่จะใช้ Identity ที่ถูกตั้งค่าไว้ใน Environment (เช่น ผ่าน gcloud impersonation) อย่างโปร่งใส
+A strategy for utilizing Application Default Credentials where the MCP Server codebase does not explicitly specify the Service Account email or load key files directly. Instead, it seamlessly adopts the identity configured in the environment (e.g., via gcloud impersonation).
 
 ### Strict Zero Key Enforcement
-มาตรการความปลอดภัยระดับ Runtime ที่ MCP Server จะตรวจสอบ Credential Configuration และปฏิเสธการทำงานทันทีหากพบว่ามีการใช้ Long-lived Private Key (JSON Key) เพื่อให้เป็นไปตาม Zero Key Policy
+A runtime security measure where the MCP Server actively inspects the credential configuration and immediately terminates execution if a long-lived Private Key (JSON Key) is detected, ensuring strict adherence to the Zero Key Policy.
 
 ### Specific WIF Identity Mapping
-มาตรการความปลอดภัยในระดับ Identity Provider ที่จะอนุญาตให้เฉพาะ Workload จากต้นทางที่ระบุ (เช่น เฉพาะ branch: main หรือ specific environment) เท่านั้นที่สามารถแลกเปลี่ยน Token เพื่อใช้งาน Service Account ได้
+A security control at the Identity Provider level that restricts token exchange to specific originating workloads (e.g., restricted to the `main` branch or a specific deployment environment), ensuring only authorized entities can utilize the Service Account.
 
 ### Search Query Injection
-เทคนิคการกักบริเวณ (Isolation) โดยที่ MCP Server จะเติมเงื่อนไข `'<ROOT_FOLDER_ID>' in parents` เข้าไปในทุกคำสั่งค้นหาของ Google Drive API โดยอัตโนมัติ เพื่อบังคับให้ผลลัพธ์จำกัดอยู่เพียงภายใต้ Root Folder เท่านั้น
+An isolation technique where the MCP Server automatically appends the condition `'<ROOT_FOLDER_ID>' in parents` to every Google Drive API search query, forcing the results to be strictly confined within the designated Root Folder.
 
 ### Explicit Auth Feedback
-กลยุทธ์การจัดการ Error ที่ MCP Server จะส่ง Message ที่ชัดเจนและเป็น Actionable กลับไปยัง AI Agent เมื่อการ Auth ล้มเหลว เพื่อให้ Agent สามารถแจ้ง User ให้รันคำสั่ง gcloud เพื่อต่ออายุ Token ได้อย่างถูกต้อง
+An error handling strategy where the MCP Server returns clear, actionable messages to the AI Agent upon authentication failure, enabling the Agent to instruct the user to run the appropriate `gcloud` command to refresh tokens.
 
 ### User-Friendly Auth Errors
-กลยุทธ์การจัดการ Error ที่ MCP Server จะให้คำแนะนำขั้นตอนการแก้ไข (เช่น คำสั่ง gcloud ที่ต้องรัน) เมื่อตรวจพบว่าการยืนยันตัวตนล้มเหลว หรือ Token หมดอายุ
+An error handling strategy where the MCP Server provides step-by-step resolution guidance (e.g., the specific `gcloud` command to execute) when it detects authentication failures or expired tokens.
 
 ### Auto-Text Export
-กลยุทธ์การจัดการไฟล์ประเภท Google Workspace (Docs, Sheets, Slides) โดยที่ MCP Server จะทำการแปลงเนื้อหาเป็น `text/plain` โดยอัตโนมัติเมื่อมีการเรียกใช้ `get_file_content` เพื่อให้ AI Agent สามารถประมวลผลเนื้อหาได้ทันทีโดยไม่ต้องจัดการเรื่อง Export MIME types เอง
+A file handling strategy for Google Workspace documents (Docs, Sheets, Slides). When `get_file_content` is invoked, the MCP Server automatically converts the content to `text/plain`, allowing AI Agents to process the data immediately without managing complex export MIME types.
 
 ### Identity-Rich Logs
-กลยุทธ์การบันทึก Log ที่รวมข้อมูล Identity ของผู้ใช้งานจริง (User Email) ที่ทำการ Impersonate Service Account ในขณะนั้น เพื่อให้สามารถตรวจสอบย้อนหลัง (Audit) ได้ว่าการกระทำต่างๆ ใน Google Drive เกิดขึ้นโดยใคร
+A logging strategy that captures and includes the identity of the actual user (User Email) impersonating the Service Account during operations. This enables accurate audit trails to determine who initiated specific actions within Google Drive.
 
 ### Local MCP Server
 The `mcp-google-drive` package executed locally within the environment (WSL/Ubuntu) using `npx`. It translates MCP tool calls into Google Drive API requests.
