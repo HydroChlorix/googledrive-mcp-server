@@ -4,17 +4,17 @@
 Accepted
 
 ## Context
-โปรเจกต์ Google Drive MCP Server ต้องการยกระดับความปลอดภัย (Security Posture) โดยการยกเลิกการใช้ Long-lived Service Account JSON Keys อย่างถาวร (Zero Key Policy) เพื่อลดความเสี่ยงจากการที่ Credential รั่วไหล และเปลี่ยนไปใช้ Keyless Authentication (ADC/WIF) แทน
+The Google Drive MCP Server project aims to elevate its security posture by permanently deprecating the use of long-lived Service Account JSON Keys (Zero Key Policy). This reduces the risk of credential leakage by transitioning entirely to Keyless Authentication (ADC/WIF).
 
-แม้ว่า Google Auth Library มาตรฐานจะยอมรับทั้งไฟล์ JSON และ Keyless Config แต่เพื่อป้องกันความผิดพลาดจากมนุษย์ (Human Error) ที่อาจแอบใช้ JSON Key ในเครื่อง Local หรือ Production เราจึงต้องการมาตรการบังคับใช้ที่เข้มงวด
+Although the standard Google Auth Library accepts both JSON files and Keyless Configurations, we require strict enforcement measures to prevent human errors where developers might inadvertently introduce JSON keys in local or production environments.
 
 ## Decision
-เราจะระบุ Logic ในระดับ Runtime ของ MCP Server เพื่อตรวจสอบ Credential Configuration ก่อนเริ่มทำงาน:
-1. หากมีการระบุ `GOOGLE_APPLICATION_CREDENTIALS` ให้ทำการโหลดไฟล์มาตรวจสอบ Content
-2. หากพบ Field `"private_key"` (ซึ่งบ่งบอกว่าเป็น Service Account JSON Key) ให้ตัว Server ทำการสั่ง Shutdown ทันที (Terminate)
-3. แจ้ง Error Message ที่ชัดเจนว่า "การใช้ JSON Key ขัดต่อข้อกำหนดความปลอดภัยของโปรเจกต์ โปรดใช้ ADC หรือ WIF เท่านั้น"
+We will implement runtime logic within the MCP Server to inspect the credential configuration before initialization:
+1. If `GOOGLE_APPLICATION_CREDENTIALS` is defined, the server will synchronously load and inspect the file content.
+2. If the field `"private_key"` is detected (indicating a Service Account JSON Key), the server will immediately terminate execution (Shutdown).
+3. The server will output a clear error message stating: "The use of JSON Keys violates project security policies. Please use ADC or WIF exclusively."
 
 ## Consequences
-- **Positive:** มั่นใจได้ 100% ว่าไม่มีการใช้ JSON Key ในระบบ และเป็นไปตาม Compliance ขององค์กร
-- **Negative:** ผู้พัฒนาที่คุ้นเคยกับการใช้ไฟล์ JSON แบบเดิมอาจจะพบความไม่สะดวกในช่วงแรก และต้องเสียเวลาตั้งค่า ADC (Impersonation)
-- **Neutral:** ต้องมีการเขียน Code ส่วนการตรวจสอบไฟล์ Credential เพิ่มเติมใน Server Setup phase
+- **Positive:** Guarantees 100% compliance with the Zero Key Policy and organizational security standards by physically preventing key usage.
+- **Negative:** Developers accustomed to legacy JSON key workflows may experience initial friction and must invest time in configuring ADC (Impersonation).
+- **Neutral:** Requires additional custom credential inspection logic during the server setup phase.

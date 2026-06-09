@@ -1,23 +1,18 @@
 #!/bin/bash
 # scripts/verify-setup.sh
+# Verifies the Keyless Auth (ADC) setup for Google Drive MCP
 
-echo "Checking MCP Server Configuration..."
+echo "🔍 Checking Google Drive MCP Keyless Setup..."
 
+# 1. Check Root Folder ID
 if [ ! -f .env.googledrive ]; then
-    echo "❌ Error: .env.googledrive file not found."
-    exit 1
-fi
-
-source .env.googledrive
-
-if [ -z "$GOOGLE_SERVICE_ACCOUNT_KEY" ]; then
-    echo "❌ Error: GOOGLE_SERVICE_ACCOUNT_KEY is not set."
-    exit 1
-fi
-
-if [ ! -f "$GOOGLE_SERVICE_ACCOUNT_KEY" ]; then
-    echo "❌ Error: Service Account Key file not found at $GOOGLE_SERVICE_ACCOUNT_KEY"
-    exit 1
+    if [ -z "$GOOGLE_DRIVE_ROOT_FOLDER_ID" ]; then
+        echo "❌ Error: .env.googledrive file not found and GOOGLE_DRIVE_ROOT_FOLDER_ID is not set."
+        echo "Please create .env.googledrive with GOOGLE_DRIVE_ROOT_FOLDER_ID=\"your_id\""
+        exit 1
+    fi
+else
+    source .env.googledrive
 fi
 
 if [ -z "$GOOGLE_DRIVE_ROOT_FOLDER_ID" ]; then
@@ -25,7 +20,32 @@ if [ -z "$GOOGLE_DRIVE_ROOT_FOLDER_ID" ]; then
     exit 1
 fi
 
-echo "✅ Configuration looks good!"
+# 2. Check gcloud CLI
+if ! command -v gcloud &> /dev/null; then
+    echo "❌ Error: gcloud CLI is not installed. This is a HARD PREREQUISITE."
+    exit 1
+fi
+
+# 3. Check ADC / Impersonation
+echo "🔍 Checking Application Default Credentials..."
+if ! gcloud auth application-default print-access-token &> /dev/null; then
+    echo "❌ Error: Application Default Credentials (ADC) are not configured."
+    echo "Please run: gcloud auth application-default login --impersonate-service-account=\"YOUR_SA_EMAIL\""
+    exit 1
+fi
+
+# 4. Check for JSON keys (Violation of Policy)
+if [ -n "$GOOGLE_APPLICATION_CREDENTIALS" ]; then
+    echo "⚠️ Warning: GOOGLE_APPLICATION_CREDENTIALS is set to: $GOOGLE_APPLICATION_CREDENTIALS"
+    echo "Checking if it is a JSON Key..."
+    if grep -q "private_key" "$GOOGLE_APPLICATION_CREDENTIALS" 2>/dev/null; then
+        echo "❌ CRITICAL SECURITY VIOLATION: JSON Key detected in GOOGLE_APPLICATION_CREDENTIALS."
+        echo "Delete the key file and unset the variable to comply with Zero Key Policy."
+        exit 1
+    fi
+fi
+
+echo "✅ Environment and Authentication look good!"
 echo ""
 echo "Now, start your AI agent and run this prompt to verify connectivity:"
 echo "👉 \"List the most recent file in my Google Drive.\""
