@@ -168,3 +168,13 @@ If the agent returns a filename from your shared folder, the setup is successful
 
 ## 9. License
 This project is licensed under the [MIT License](LICENSE).
+
+---
+
+## 7. Verification
+To ensure your MCP server is working correctly, you can perform a simple "smoke test":
+
+1. Start your AI agent (Gemini, Hermes, etc.) with this MCP server configured.
+2. Ask the agent: **"List the most recent file in my Google Drive."**
+3. **Success**: The agent should return the name of a file from your shared folder.
+4. **Troubleshooting**: If it fails, check your `.env.googledrive` paths and Service Account permissions.
