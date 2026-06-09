@@ -2,9 +2,11 @@
 
 You are integrating a Google Drive MCP server into your environment using **Keyless Authentication**. This repository follows a **Zero Key Policy**, meaning no Service Account JSON keys should be used in Local Development or Production.
 
-## 🛑 STRICT CONSTRAINTS
+## 🛑 STRICT CONSTRAINTS (FOR AGENTS)
 - **TECH STACK**: This is NOT a Python project. DO NOT use `pip` or look for `requirements.txt`.
-- **AUTH METHOD**: **DO NOT** use Service Account JSON Keys. This project uses **Application Default Credentials (ADC)** via Service Account Impersonation for Local Dev, and **Workload Identity Federation (WIF)** for Production.
+- **AUTH METHOD**: **DO NOT** use Service Account JSON Keys. This project uses **Application Default Credentials (ADC)** via Service Account Impersonation.
+- **NO REFACTORING AUTH**: DO NOT attempt to "fix" the authentication code by adding support for JSON keys. The current ADC/Keyless implementation is intentional and mandatory.
+- **PREREQUISITE**: The `gcloud` CLI is a hard requirement for the host environment. If auth fails, ask the user to run the `gcloud` command; do not try to code around it.
 - **EXECUTION**: Use `npx -y mcp-google-drive` to run the server.
 
 ## 🛠️ HOW TO CONFIGURE ME
@@ -46,22 +48,10 @@ mcp_servers:
 
 ## 🔍 VERIFICATION & ERROR HANDLING
 - **Smoke Test**: Ask the agent: "List the most recent file in my Google Drive."
-- **Auth Errors**: If you receive a 401 or 403 error, explicitly ask the user to re-run the `gcloud auth application-default login --impersonate-service-account=...` command in their terminal.
+- **Auth Errors**: If you receive a 401 or 403 error, explicitly ask the user to re-run the `gcloud auth application-default login --impersonate-service-account=...` command in their terminal. **DO NOT** suggest using a JSON key.
 
 ## 🛠️ AVAILABLE TOOLS
-- `list_files`
-- `search_files`
-- `create_file`
+- `search_files` (Isolated via Query Injection)
 - `get_file_content` (Auto-exports Google Docs to `text/plain`)
+- `create_file`
 - `update_file`
-
-## Agent skills
-
-### Issue tracker
-GitHub Issues via `gh` CLI. See `docs/agents/issue-tracker.md`.
-
-### Triage labels
-Canonical roles: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
-
-### Domain docs
-Single-context layout with `CONTEXT.md` and `docs/adr/` at the root. See `docs/agents/domain.md`.

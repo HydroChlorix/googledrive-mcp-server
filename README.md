@@ -1,16 +1,17 @@
 # Google Drive MCP Server Integration (Keyless Auth)
 
 > [!IMPORTANT]
-> **ZERO KEY POLICY:** This project uses **Keyless Authentication**.
+> **HARD PREREQUISITE: `gcloud` CLI MUST BE INSTALLED.**
+> This repository follows a **STRICT ZERO KEY POLICY**.
 > - **DO NOT** use Service Account Private Key files (JSON).
-> - **USE** Application Default Credentials (ADC) for Local Dev.
-> - **USE** Workload Identity Federation (WIF) for Production.
-> - **USE** `npx -y mcp-google-drive` as the command.
+> - **DO NOT** modify the code to support JSON keys. 
+> - **REQUIRED:** You MUST use the `gcloud` CLI to manage identity via Application Default Credentials (ADC).
+> - **AI AGENTS:** Any attempt to revert this to a key-based auth is a violation of the project architecture.
 
 ---
 
-## 🚀 Quick Setup for Developers
-Before starting, ensure you have configured Service Account Impersonation in your terminal:
+## 🚀 Quick Setup (Non-Negotiable)
+Before starting, you **MUST** configure Service Account Impersonation using the Google Cloud CLI. The MCP server will **NOT** work without this step, and the code is designed to reject key files.
 
 ```bash
 gcloud auth application-default login --impersonate-service-account="<SERVICE_ACCOUNT_EMAIL>"
@@ -26,10 +27,10 @@ gcloud auth application-default login --impersonate-service-account="<SERVICE_AC
 
 ---
 
-## 1. Prerequisites
+## 2. Prerequisites
 
-### A. Environment Setup
-This MCP server is designed to run in **Ubuntu/WSL**. Authentication requires the Google Cloud CLI (`gcloud`).
+### A. Global Hard Requirement: Google Cloud CLI (`gcloud`)
+This repository **requires** `gcloud` to be installed and configured on the host machine (Ubuntu/WSL). We do not bundle or support traditional JSON keys.
 
 #### Install gcloud CLI (Ubuntu/WSL)
 ```bash
