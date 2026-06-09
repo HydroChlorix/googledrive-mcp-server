@@ -124,3 +124,11 @@ If the agent returns a filename from your shared folder, the setup is successful
 
 ## 9. License
 This project is licensed under the [MIT License](LICENSE).
+
+---
+
+## 7. Verification
+Run a smoke test with your AI agent:
+> **Prompt**: "List the most recent file in my Google Drive."
+
+If the agent returns a filename from your shared folder, the setup is successful.
