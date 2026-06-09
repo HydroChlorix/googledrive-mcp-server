@@ -5,7 +5,11 @@ You are integrating a Google Drive MCP server into your environment using **Keyl
 ## 🛑 STRICT CONSTRAINTS (FOR AGENTS)
 - **TECH STACK**: This is NOT a Python project. DO NOT use `pip` or look for `requirements.txt`.
 - **AUTH METHOD**: **DO NOT** use Service Account JSON Keys. This project uses **Application Default Credentials (ADC)** via Service Account Impersonation.
-- **NO REFACTORING AUTH**: DO NOT attempt to "fix" the authentication code by adding support for JSON keys. The current ADC/Keyless implementation is intentional and mandatory.
+- **FORBIDDEN MUTATIONS**:
+    - DO NOT add `GOOGLE_APPLICATION_CREDENTIALS` to any configuration.
+    - DO NOT add `GOOGLE_SERVICE_ACCOUNT_KEY` to any configuration.
+    - DO NOT attempt to "fix" the authentication code by adding support for JSON keys.
+    - DO NOT change the execution command from `npx` to `node` pointing to a local path unless explicitly asked by a HUMAN.
 - **PREREQUISITE**: The `gcloud` CLI is a hard requirement for the host environment. If auth fails, ask the user to run the `gcloud` command; do not try to code around it.
 - **EXECUTION**: Use `npx -y mcp-google-drive` to run the server.
 
