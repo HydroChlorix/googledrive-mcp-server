@@ -15,7 +15,8 @@
   "license": "MIT",
   "dependencies": {
     "@modelcontextprotocol/sdk": "latest",
-    "googleapis": "^173.0.0"
+    "googleapis": "^173.0.0",
+    "pino": "^10.3.1"
   },
   "devDependencies": {
     "jest": "^30.4.2"

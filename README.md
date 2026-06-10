@@ -95,7 +95,8 @@ GOOGLE_DRIVE_ROOT_FOLDER_ID="your_google_drive_folder_id"
 
 ---
 
-# Hermes Agent (`~/.hermes/config.yaml`)
+### B. Hermes Agent
+Add to `~/.hermes/config.yaml`:
 
 ```yaml
 mcp_servers:
@@ -125,10 +126,12 @@ mcp_servers:
 ---
 
 ## 8. Verification
-Run a smoke test with your AI agent:
-> **Prompt**: "List the most recent file in my Google Drive."
+To ensure your MCP server is working correctly, you can perform a simple "smoke test":
 
-If the agent returns a filename from your shared folder, the setup is successful.
+1. Start your AI agent (Gemini, Hermes, etc.) with this MCP server configured.
+2. Ask the agent: **"List the most recent file in my Google Drive."**
+3. **Success**: The agent should return the name of a file from your shared folder.
+4. **Troubleshooting**: If it fails, check your `.env.googledrive` paths and Service Account permissions.
 
 ---
 
