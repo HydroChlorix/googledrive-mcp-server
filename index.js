@@ -4,14 +4,15 @@ const { StdioServerTransport } = require("@modelcontextprotocol/sdk/server/stdio
 const { CallToolRequestSchema, ListToolsRequestSchema } = require("@modelcontextprotocol/sdk/types.js");
 const { getDriveClient } = require('./src/auth.js');
 const { searchFiles, getFileContent, createFile, updateFile, getIdentity } = require('./src/tools.js');
+const logger = require('./src/logger.js');
 
 async function main() {
-  console.error("Starting Google Drive MCP Server (Keyless Auth)...");
+  logger.info("Starting Google Drive MCP Server (Keyless Auth)...");
   
   try {
     // Verify we can get a client (this will throw if ADC is not configured properly)
     const driveClient = await getDriveClient();
-    console.error("Successfully initialized Google Drive client via ADC.");
+    logger.info("Successfully initialized Google Drive client via ADC.");
 
     const server = new Server(
       {
@@ -123,13 +124,13 @@ async function main() {
 
     const transport = new StdioServerTransport();
     await server.connect(transport);
-    console.error("MCP Server connected to stdio transport.");
+    logger.info("MCP Server connected to stdio transport.");
 
   } catch (error) {
-    console.error("Failed to start server:");
-    console.error(error.message);
+    logger.error("Failed to start server:");
+    logger.error(error.message);
     process.exit(1);
   }
 }
 
-main().catch(console.error);
+main().catch((err) => logger.error(err));
