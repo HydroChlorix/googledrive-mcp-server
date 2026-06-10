@@ -33,20 +33,24 @@ sudo apt-get update && sudo apt-get install google-cloud-sdk
 ```
 
 ### B. Google Cloud IAM Setup
-1. **Service Account**: Create a Service Account (e.g., `mcp-drive-sa@project.iam.gserviceaccount.com`).
-2. **Zero Key Policy**: Do **NOT** create a Private Key JSON file.
-3. **Permissions**: Grant your developer account the `Service Account Token Creator` role on the Service Account.
-    - **Via Console**: Go to IAM > Service Accounts > [Your SA] > Permissions > Grant Access > Add your email with `roles/iam.serviceAccountTokenCreator`.
-    - **Via CLI**: 
+1.  **Service Account**: Create a Service Account (e.g., `mcp-drive-sa@project.iam.gserviceaccount.com`).
+2.  **Zero Key Policy**: Do **NOT** create a Private Key JSON file.
+3.  **Permissions**: Grant your developer account the `Service Account Token Creator` role on the Service Account.
+    -   **Via Console**: Go to IAM > Service Accounts > [Your SA] > Permissions > Grant Access > Add your email with `roles/iam.serviceAccountTokenCreator`.
+    -   **Via CLI**: 
         ```bash
         gcloud iam service-accounts add-iam-policy-binding <SERVICE_ACCOUNT_EMAIL> \
             --member="user:<YOUR_EMAIL>" \
             --role="roles/iam.serviceAccountTokenCreator"
         ```
-4. **API Enablement**: Ensure the **Google Drive API** and **IAM Service Account Credentials API** are enabled in your GCP project:
+4.  **API Enablement**: Ensure the **Google Drive API** and **IAM Service Account Credentials API** are enabled in your GCP project.
     ```bash
     gcloud services enable drive.googleapis.com iamcredentials.googleapis.com
     ```
+
+### C. Google Drive Setup
+1. **Share Folder**: Share your target Google Drive folder with the Service Account email as an **Editor**.
+2. **Folder ID**: Copy the Folder ID from the URL (e.g., `180Y5FAzId...`).
 
 ---
 
@@ -91,8 +95,7 @@ GOOGLE_DRIVE_ROOT_FOLDER_ID="your_google_drive_folder_id"
 
 ---
 
-### B. Hermes Agent
-Add to `~/.hermes/config.yaml`:
+# Hermes Agent (`~/.hermes/config.yaml`)
 
 ```yaml
 mcp_servers:
@@ -131,11 +134,3 @@ If the agent returns a filename from your shared folder, the setup is successful
 
 ## 9. License
 This project is licensed under the [MIT License](LICENSE).
-
----
-
-## 7. Verification
-Run a smoke test with your AI agent:
-> **Prompt**: "List the most recent file in my Google Drive."
-
-If the agent returns a filename from your shared folder, the setup is successful.
