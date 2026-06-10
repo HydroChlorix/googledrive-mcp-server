@@ -9,7 +9,9 @@
   "keywords": [
     "mcp",
     "google-drive",
-    "service-account"
+    "service-account",
+    "adc",
+    "keyless"
   ],
   "author": "",
   "license": "MIT",
