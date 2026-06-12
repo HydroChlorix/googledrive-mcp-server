@@ -37,47 +37,75 @@ async function searchFiles(query, identity) {
 }
 
 /**
+ * Fetches a Drive file's metadata and exports its content as plain text.
+ *
+ * Used by both `getFileContent` (which adds a Root Folder membership check)
+ * and the upcoming `get_file_from_url` tool (ADR-0005), which skips that check.
+ *
+ * @param {object} drive An authenticated googleapis drive client.
+ * @param {string} fileId The Drive file ID to fetch.
+ * @returns {Promise<{mimeType: string, name: string, parents: string[], content: string}>}
+ *   The file's metadata plus its exported/streamed content.
+ */
+async function fetchAndExportContent(drive, fileId) {
+  // Step 1: fetch metadata (mimeType drives export vs raw download)
+  const metaRes = await drive.files.get({
+    fileId: fileId,
+    fields: 'mimeType, name, parents',
+  });
+  const mimeType = metaRes.data.mimeType;
+  const name = metaRes.data.name;
+  const parents = metaRes.data.parents || [];
+
+  // Step 3: ADR 0003 Auto-Text Export for Google Workspace files, raw download otherwise
+  let content;
+  if (mimeType.startsWith('application/vnd.google-apps.')) {
+    const exportRes = await drive.files.export({
+      fileId: fileId,
+      mimeType: 'text/plain',
+    });
+    content = typeof exportRes.data === 'string' ? exportRes.data : JSON.stringify(exportRes.data);
+  } else {
+    const getRes = await drive.files.get({
+      fileId: fileId,
+      alt: 'media',
+    });
+    content = typeof getRes.data === 'string' ? getRes.data : JSON.stringify(getRes.data);
+  }
+
+  return { mimeType, name, parents, content };
+}
+
+/**
  * Retrieves file content, automatically exporting Google Workspace files as plain text.
- * 
+ *
+ * Performs an ADR-0002 Root Folder membership check before delegating metadata +
+ * content retrieval to the shared `fetchAndExportContent` helper.
+ *
  * @param {string} fileId The ID of the file to read.
  * @param {string} identity The user identity from the token (for logging).
- * @returns {string} The file content.
+ * @returns {Promise<string>} The file content.
  */
 async function getFileContent(fileId, identity) {
   const rootFolderId = process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID;
   console.error(`[Audit] User ${identity || 'Unknown'} executing get_file_content for fileId: ${fileId}`);
-  
-  const drive = await getDriveClient();
-  
-  // First, get file metadata to check mimeType and parents (ADR 0002)
-  const metaRes = await drive.files.get({
-    fileId: fileId,
-    fields: 'mimeType, name, parents'
-  });
-  
-  const mimeType = metaRes.data.mimeType;
-  const parents = metaRes.data.parents || [];
 
+  const drive = await getDriveClient();
+
+  // ADR 0002: perform Root Folder check BEFORE delegating to the helper.
+  // We do our own metadata fetch here so that an out-of-folder file never
+  // has its content streamed into memory by the helper.
+  const guardRes = await drive.files.get({
+    fileId: fileId,
+    fields: 'mimeType, name, parents',
+  });
+  const parents = guardRes.data.parents || [];
   if (rootFolderId && !parents.includes(rootFolderId)) {
     throw new Error('Access Denied: File is outside the designated Root Folder.');
   }
-  
-  // ADR 0003: Auto-Text Export
-  if (mimeType.startsWith('application/vnd.google-apps.')) {
-    const exportRes = await drive.files.export({
-      fileId: fileId,
-      mimeType: 'text/plain'
-    });
-    return typeof exportRes.data === 'string' ? exportRes.data : JSON.stringify(exportRes.data);
-  } else {
-    const getRes = await drive.files.get({
-      fileId: fileId,
-      alt: 'media'
-    });
-    // Depending on the file type, getRes.data might be a stream or buffer. 
-    // Assuming mostly text-based interaction for LLMs.
-    return typeof getRes.data === 'string' ? getRes.data : JSON.stringify(getRes.data);
-  }
+
+  // Delegate the metadata + content work to the shared helper.
+  return await fetchAndExportContent(drive, fileId).then((r) => r.content);
 }
 
 /**
@@ -153,6 +181,7 @@ async function updateFile(fileId, content, identity) {
 module.exports = {
   searchFiles,
   getFileContent,
+  fetchAndExportContent,
   createFile,
   updateFile,
   getIdentity
