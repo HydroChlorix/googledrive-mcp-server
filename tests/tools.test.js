@@ -1,4 +1,4 @@
-const { searchFiles, getFileContent, createFile, updateFile, getIdentity } = require('../src/tools');
+const { searchFiles, getFileContent, fetchDriveFileContent, createFile, updateFile, getIdentity } = require('../src/tools');
 const { getDriveClient } = require('../src/auth');
 
 jest.mock('../src/auth', () => ({
@@ -105,6 +105,41 @@ describe('Tools', () => {
       await getFileContent('file-789', 'user@example.com');
       
       expect(console.error).toHaveBeenCalledWith("[Audit] User user@example.com executing get_file_content for fileId: file-789");
+    });
+  });
+
+  describe('fetchDriveFileContent', () => {
+    it('should export Google Workspace files as text/plain (ADR 0003) and not check root folder isolation', async () => {
+      mockDriveFilesGet.mockResolvedValueOnce({ data: { mimeType: 'application/vnd.google-apps.document', name: 'Doc', parents: ['outside-root'] } });
+      mockDriveFilesExport.mockResolvedValueOnce({ data: 'workspace content' });
+      
+      const content = await fetchDriveFileContent('file-123', 'user@example.com');
+      
+      expect(mockDriveFilesGet).toHaveBeenCalledWith({ fileId: 'file-123', fields: 'mimeType, name, parents' });
+      expect(mockDriveFilesExport).toHaveBeenCalledWith({ fileId: 'file-123', mimeType: 'text/plain' });
+      expect(content).toBe('workspace content');
+    });
+
+    it('should get standard files directly using alt=media and not check root folder isolation', async () => {
+      mockDriveFilesGet.mockResolvedValueOnce({ data: { mimeType: 'text/plain', name: 'File', parents: ['outside-root'] } });
+      mockDriveFilesGet.mockResolvedValueOnce({ data: 'standard content' });
+      
+      const content = await fetchDriveFileContent('file-456', 'user@example.com');
+      
+      expect(mockDriveFilesGet).toHaveBeenNthCalledWith(1, { fileId: 'file-456', fields: 'mimeType, name, parents' });
+      expect(mockDriveFilesGet).toHaveBeenNthCalledWith(2, { fileId: 'file-456', alt: 'media' });
+      expect(content).toBe('standard content');
+    });
+
+    it('should use pre-fetched metadata if provided to avoid metadata get API call', async () => {
+      mockDriveFilesGet.mockResolvedValueOnce({ data: 'standard content' });
+      
+      const preFetched = { mimeType: 'text/plain', name: 'File', parents: ['outside-root'] };
+      const content = await fetchDriveFileContent('file-456', 'user@example.com', preFetched);
+      
+      expect(mockDriveFilesGet).toHaveBeenCalledWith({ fileId: 'file-456', alt: 'media' });
+      expect(mockDriveFilesGet).not.toHaveBeenCalledWith({ fileId: 'file-456', fields: 'mimeType, name, parents' });
+      expect(content).toBe('standard content');
     });
   });
 
