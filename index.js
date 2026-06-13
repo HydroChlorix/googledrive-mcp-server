@@ -3,7 +3,7 @@ const { Server } = require("@modelcontextprotocol/sdk/server/index.js");
 const { StdioServerTransport } = require("@modelcontextprotocol/sdk/server/stdio.js");
 const { CallToolRequestSchema, ListToolsRequestSchema } = require("@modelcontextprotocol/sdk/types.js");
 const { getDriveClient } = require('./src/auth.js');
-const { searchFiles, getFileContent, createFile, updateFile, getIdentity } = require('./src/tools.js');
+const { searchFiles, getFileContent, getFileFromUrl, createFile, updateFile, getIdentity } = require('./src/tools.js');
 const logger = require('./src/logger.js');
 
 async function main() {
@@ -52,6 +52,17 @@ async function main() {
             }
           },
           {
+            name: "get_file_from_url",
+            description: "Read the content of a Google Drive file from a shared URL. Supports Drive, Docs, Sheets, and Slides links.",
+            inputSchema: {
+              type: "object",
+              properties: {
+                url: { type: "string", description: "A Google Drive URL" }
+              },
+              required: ["url"]
+            }
+          },
+          {
             name: "create_file",
             description: "Create a new file in the root folder.",
             inputSchema: {
@@ -93,6 +104,12 @@ async function main() {
           }
           case "get_file_content": {
             const content = await getFileContent(request.params.arguments.fileId, identity);
+            return {
+              content: [{ type: "text", text: content }]
+            };
+          }
+          case "get_file_from_url": {
+            const content = await getFileFromUrl(request.params.arguments.url, identity);
             return {
               content: [{ type: "text", text: content }]
             };
