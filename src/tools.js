@@ -1,4 +1,5 @@
 const { getDriveClient } = require('./auth');
+const { extractFileId } = require('./url-parser');
 
 /**
  * Extracts identity from environment or drive client.
@@ -109,6 +110,50 @@ async function getFileContent(fileId, identity) {
 }
 
 /**
+ * Reads a Google Drive file from a shared URL, exporting Google Workspace
+ * files as plain text (ADR-0003). Per ADR-0005, no Root Folder membership
+ * check is performed (ADR-0002) — this tool is for externally shared files.
+ *
+ * @param {string} url A full Google Drive URL (see url-parser for accepted shapes).
+ * @param {string} identity The user identity from the token (for logging).
+ * @returns {Promise<string>} The file content as text.
+ */
+async function getFileFromUrl(url, identity) {
+  // Parse first so a bad URL fails fast with a clear message (not a crash).
+  const fileId = extractFileId(url);
+
+  // ADR 0004: Identity-Rich Logging
+  console.error(
+    `[Audit] User ${identity || 'Unknown'} executing get_file_from_url for url: ${url} (resolved fileId: ${fileId})`
+  );
+
+  const drive = await getDriveClient();
+  try {
+    const result = await fetchAndExportContent(drive, fileId);
+    return result.content;
+  } catch (apiErr) {
+    // Wrap Drive API errors with actionable guidance (User-Friendly Auth Errors).
+    const status = apiErr.code || apiErr.response?.status;
+    const original = apiErr.message || String(apiErr);
+    if (status === 403) {
+      throw new Error(
+        `Access Denied: Service Account cannot read fileId ${fileId}. ` +
+        `Share the file with the Service Account's email address via Drive's "Share" button, ` +
+        `or revoke restricted-link sharing. Original error: ${original}`
+      );
+    }
+    if (status === 404) {
+      throw new Error(
+        `File Not Found: fileId ${fileId} could not be located. ` +
+        `The link may be stale, the file may be in trash, or sharing may be restricted. ` +
+        `Original error: ${original}`
+      );
+    }
+    throw apiErr;
+  }
+}
+
+/**
  * Creates a new file inside the Root Folder.
  * 
  * @param {string} name The file name.
@@ -181,6 +226,7 @@ async function updateFile(fileId, content, identity) {
 module.exports = {
   searchFiles,
   getFileContent,
+  getFileFromUrl,
   fetchAndExportContent,
   createFile,
   updateFile,
