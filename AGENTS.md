@@ -46,3 +46,18 @@ If you encounter a `401 Unauthorized` or `403 Forbidden` error:
 - `get_file_from_url`: Reads a Google Drive file from a shared URL. Supports Drive, Docs, Sheets, and Slides links. **No Root Folder check** — accepts externally shared files (ADR-0005). Auto-exports Google Workspace files as `text/plain` (ADR-0003).
 - `create_file`: Creates files directly in the Root Folder.
 - `update_file`: Updates files after verifying Root Folder membership.
+
+## Agent skills
+
+### Issue tracker
+
+Tracked via GitHub Issues using `gh` CLI. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Canonical 5-role label vocabulary (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context layout (`CONTEXT.md` + `docs/adr/`). See `docs/agents/domain.md`.
+
