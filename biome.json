@@ -9,6 +9,12 @@
       "recommended": true,
       "suspicious": {
         "noExplicitAny": "error"
+      },
+      "complexity": {
+        "useLiteralKeys": "off"
+      },
+      "performance": {
+        "noDelete": "off"
       }
     }
   },
@@ -19,11 +25,6 @@
     "lineWidth": 100
   },
   "files": {
-    "ignore": [
-      "node_modules",
-      "dist",
-      "coverage",
-      "package-lock.json"
-    ]
+    "ignore": ["node_modules", "dist", "coverage", "package-lock.json"]
   }
 }

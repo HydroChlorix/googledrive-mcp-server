@@ -20,7 +20,7 @@ export interface DriveApiError extends Error {
  * Extracts identity from environment or drive client.
  */
 export async function getIdentity(): Promise<string> {
-  return process.env.IMPERSONATED_USER_EMAIL || "Impersonated Service Account Session";
+  return process.env["IMPERSONATED_USER_EMAIL"] || "Impersonated Service Account Session";
 }
 
 /**
@@ -30,7 +30,7 @@ export async function searchFiles(
   query: string,
   identity?: string,
 ): Promise<drive_v3.Schema$File[]> {
-  const rootFolderId = process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID;
+  const rootFolderId = process.env["GOOGLE_DRIVE_ROOT_FOLDER_ID"];
   if (!rootFolderId) {
     throw new Error("GOOGLE_DRIVE_ROOT_FOLDER_ID is not set in environment variables.");
   }
@@ -92,7 +92,7 @@ export async function fetchAndExportContent(
  * Retrieves file content, automatically exporting Google Workspace files as plain text.
  */
 export async function getFileContent(fileId: string, identity?: string): Promise<string> {
-  const rootFolderId = process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID;
+  const rootFolderId = process.env["GOOGLE_DRIVE_ROOT_FOLDER_ID"];
   console.error(
     `[Audit] User ${identity || "Unknown"} executing get_file_content for fileId: ${fileId}`,
   );
@@ -154,7 +154,7 @@ export async function createFile(
   mimeType = "text/plain",
   identity?: string,
 ): Promise<drive_v3.Schema$File> {
-  const rootFolderId = process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID;
+  const rootFolderId = process.env["GOOGLE_DRIVE_ROOT_FOLDER_ID"];
   if (!rootFolderId) {
     throw new Error("GOOGLE_DRIVE_ROOT_FOLDER_ID is not set in environment variables.");
   }
@@ -186,7 +186,7 @@ export async function updateFile(
   content: string,
   identity?: string,
 ): Promise<drive_v3.Schema$File> {
-  const rootFolderId = process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID;
+  const rootFolderId = process.env["GOOGLE_DRIVE_ROOT_FOLDER_ID"];
   console.error(
     `[Audit] User ${identity || "Unknown"} executing update_file for fileId: ${fileId}`,
   );

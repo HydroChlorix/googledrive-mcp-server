@@ -13,13 +13,7 @@
     "lint": "biome check .",
     "lint:fix": "biome check --write ."
   },
-  "keywords": [
-    "mcp",
-    "google-drive",
-    "service-account",
-    "adc",
-    "keyless"
-  ],
+  "keywords": ["mcp", "google-drive", "service-account", "adc", "keyless"],
   "author": "",
   "license": "MIT",
   "dependencies": {
@@ -34,4 +28,3 @@
     "vitest": "^3.0.0"
   }
 }
-

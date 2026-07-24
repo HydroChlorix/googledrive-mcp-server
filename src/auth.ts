@@ -7,7 +7,7 @@ import { type drive_v3, google } from "googleapis";
  */
 export async function getDriveClient(): Promise<drive_v3.Drive> {
   // ADR 0001: Strict Zero Key Enforcement
-  const credPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+  const credPath = process.env["GOOGLE_APPLICATION_CREDENTIALS"];
   if (credPath) {
     try {
       const credsContent = fs.readFileSync(credPath, "utf8");
