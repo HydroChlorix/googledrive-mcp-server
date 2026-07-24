@@ -1,6 +1,6 @@
 const { CallToolRequestSchema, ListToolsRequestSchema } = require("@modelcontextprotocol/sdk/types.js");
 
-// Mock auth.js, tools.js, urlParser.js
+// Mock auth.js and tools.js
 const mockGetDriveClient = jest.fn();
 jest.mock('../src/auth.js', () => ({
   getDriveClient: mockGetDriveClient
@@ -8,7 +8,7 @@ jest.mock('../src/auth.js', () => ({
 
 const mockSearchFiles = jest.fn();
 const mockGetFileContent = jest.fn();
-const mockFetchDriveFileContent = jest.fn();
+const mockGetFileFromUrl = jest.fn();
 const mockCreateFile = jest.fn();
 const mockUpdateFile = jest.fn();
 const mockGetIdentity = jest.fn().mockResolvedValue('test-user@example.com');
@@ -16,15 +16,10 @@ const mockGetIdentity = jest.fn().mockResolvedValue('test-user@example.com');
 jest.mock('../src/tools.js', () => ({
   searchFiles: mockSearchFiles,
   getFileContent: mockGetFileContent,
-  fetchDriveFileContent: mockFetchDriveFileContent,
+  getFileFromUrl: mockGetFileFromUrl,
   createFile: mockCreateFile,
   updateFile: mockUpdateFile,
   getIdentity: mockGetIdentity
-}));
-
-const mockParseDriveUrl = jest.fn();
-jest.mock('../src/urlParser.js', () => ({
-  parseDriveUrl: mockParseDriveUrl
 }));
 
 // We need to capture the handlers registered by index.js
@@ -77,7 +72,7 @@ describe('Index.js MCP Server End-to-End Integration', () => {
     const result = await listToolsHandler();
     const tool = result.tools.find(t => t.name === 'get_file_from_url');
     expect(tool).toBeDefined();
-    expect(tool.description).toContain('Read the content of a file using its Google Drive or Google Docs URL');
+    expect(tool.description).toContain('Read the content of a Google Drive file from a shared URL');
     expect(tool.inputSchema.properties.url).toBeDefined();
     expect(tool.inputSchema.required).toContain('url');
   });
@@ -85,11 +80,9 @@ describe('Index.js MCP Server End-to-End Integration', () => {
   it('should handle get_file_from_url call tool request successfully', async () => {
     expect(callToolHandler).toBeDefined();
     const testUrl = 'https://docs.google.com/document/d/12345/edit';
-    const testFileId = '12345';
     const testContent = 'Hello URL file content';
 
-    mockParseDriveUrl.mockReturnValue(testFileId);
-    mockFetchDriveFileContent.mockResolvedValue(testContent);
+    mockGetFileFromUrl.mockResolvedValue(testContent);
 
     const response = await callToolHandler({
       params: {
@@ -98,21 +91,17 @@ describe('Index.js MCP Server End-to-End Integration', () => {
       }
     });
 
-    expect(mockParseDriveUrl).toHaveBeenCalledWith(testUrl);
-    expect(mockFetchDriveFileContent).toHaveBeenCalledWith(testFileId, 'test-user@example.com');
-    expect(consoleErrorSpy).toHaveBeenCalledWith('[Audit] User test-user@example.com executing get_file_from_url for URL: ' + testUrl);
+    expect(mockGetFileFromUrl).toHaveBeenCalledWith(testUrl, 'test-user@example.com');
     expect(response).toEqual({
       content: [{ type: 'text', text: testContent }]
     });
   });
 
-  it('should return isError when url parsing fails', async () => {
+  it('should return isError when get_file_from_url fails', async () => {
     expect(callToolHandler).toBeDefined();
     const testUrl = 'invalid-url';
 
-    mockParseDriveUrl.mockImplementation(() => {
-      throw new Error('Bare file ID provided. A full Google Drive URL is required.');
-    });
+    mockGetFileFromUrl.mockRejectedValue(new Error('Bare file ID provided. A full Google Drive URL is required.'));
 
     const response = await callToolHandler({
       params: {
@@ -126,25 +115,5 @@ describe('Index.js MCP Server End-to-End Integration', () => {
       isError: true
     });
   });
-
-  it('should return isError when file fetching fails', async () => {
-    expect(callToolHandler).toBeDefined();
-    const testUrl = 'https://docs.google.com/document/d/12345/edit';
-    const testFileId = '12345';
-
-    mockParseDriveUrl.mockReturnValue(testFileId);
-    mockFetchDriveFileContent.mockRejectedValue(new Error('Drive API error'));
-
-    const response = await callToolHandler({
-      params: {
-        name: 'get_file_from_url',
-        arguments: { url: testUrl }
-      }
-    });
-
-    expect(response).toEqual({
-      content: [{ type: 'text', text: 'Error: Drive API error' }],
-      isError: true
-    });
-  });
 });
+
