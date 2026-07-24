@@ -37,31 +37,28 @@ async function searchFiles(query, identity) {
 }
 
 /**
- * Retrieves file content, automatically exporting Google Workspace files as plain text.
+ * Internal helper to fetch file metadata, perform auto-text export (ADR-0003)
+ * for Google Workspace files, and read content for normal files. No Root Folder checks.
  * 
- * @param {string} fileId The ID of the file to read.
+ * @param {string} fileId The ID of the file to fetch.
  * @param {string} identity The user identity from the token (for logging).
- * @returns {string} The file content.
+ * @param {Object} [preFetchedMeta] Optional pre-fetched file metadata.
+ * @returns {Promise<string>} The file content.
  */
-async function getFileContent(fileId, identity) {
-  const rootFolderId = process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID;
-  console.error(`[Audit] User ${identity || 'Unknown'} executing get_file_content for fileId: ${fileId}`);
-  
+async function fetchDriveFileContent(fileId, identity, preFetchedMeta = null) {
   const drive = await getDriveClient();
   
-  // First, get file metadata to check mimeType and parents (ADR 0002)
-  const metaRes = await drive.files.get({
-    fileId: fileId,
-    fields: 'mimeType, name, parents'
-  });
-  
-  const mimeType = metaRes.data.mimeType;
-  const parents = metaRes.data.parents || [];
-
-  if (rootFolderId && !parents.includes(rootFolderId)) {
-    throw new Error('Access Denied: File is outside the designated Root Folder.');
+  let mimeType;
+  if (preFetchedMeta && preFetchedMeta.mimeType) {
+    mimeType = preFetchedMeta.mimeType;
+  } else {
+    const metaRes = await drive.files.get({
+      fileId: fileId,
+      fields: 'mimeType, name, parents'
+    });
+    mimeType = metaRes.data.mimeType;
   }
-  
+
   // ADR 0003: Auto-Text Export
   if (mimeType.startsWith('application/vnd.google-apps.')) {
     const exportRes = await drive.files.export({
@@ -78,6 +75,35 @@ async function getFileContent(fileId, identity) {
     // Assuming mostly text-based interaction for LLMs.
     return typeof getRes.data === 'string' ? getRes.data : JSON.stringify(getRes.data);
   }
+}
+
+/**
+ * Retrieves file content, automatically exporting Google Workspace files as plain text.
+ * Enforces Root Folder isolation.
+ * 
+ * @param {string} fileId The ID of the file to read.
+ * @param {string} identity The user identity from the token (for logging).
+ * @returns {Promise<string>} The file content.
+ */
+async function getFileContent(fileId, identity) {
+  const rootFolderId = process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID;
+  console.error(`[Audit] User ${identity || 'Unknown'} executing get_file_content for fileId: ${fileId}`);
+  
+  const drive = await getDriveClient();
+  
+  // First, get file metadata to check mimeType and parents (ADR 0002)
+  const metaRes = await drive.files.get({
+    fileId: fileId,
+    fields: 'mimeType, name, parents'
+  });
+  
+  const parents = metaRes.data.parents || [];
+
+  if (rootFolderId && !parents.includes(rootFolderId)) {
+    throw new Error('Access Denied: File is outside the designated Root Folder.');
+  }
+
+  return fetchDriveFileContent(fileId, identity, metaRes.data);
 }
 
 /**
@@ -153,6 +179,7 @@ async function updateFile(fileId, content, identity) {
 module.exports = {
   searchFiles,
   getFileContent,
+  fetchDriveFileContent,
   createFile,
   updateFile,
   getIdentity

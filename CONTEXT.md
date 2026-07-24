@@ -53,3 +53,10 @@ The specific Google Drive sharing level granted to the Service Account's email a
 
 ### Principle of Least Privilege
 The security practice of ensuring the Service Account has no global IAM roles in Google Cloud Console, with access restricted solely through Drive-level folder sharing.
+
+### External Shared File
+A Google Drive file owned by someone outside the project, accessed via a shared URL. These files live outside the Root Folder and are read-only from the MCP server's perspective.
+_Avoid_: Public file, linked file
+
+### URL-Gated Access
+A security boundary where access to External Shared Files requires a full Google Drive URL as input, not a bare file ID. This prevents the `get_file_from_url` tool from becoming a backdoor to bypass Root Folder Isolation.
