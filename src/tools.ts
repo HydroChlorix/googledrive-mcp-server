@@ -2,6 +2,12 @@ import type { drive_v3 } from "googleapis";
 import { getDriveClient } from "./auth.js";
 import { extractFileId } from "./url-parser.js";
 
+export interface DriveFileMetadata {
+  mimeType?: string | null;
+  name?: string | null;
+  parents?: string[] | null;
+}
+
 export interface DriveFileExportResult {
   mimeType: string;
   name: string;
@@ -14,6 +20,27 @@ export interface DriveApiError extends Error {
   response?: {
     status?: number;
   };
+}
+
+/**
+ * Gets the designated Root Folder ID from environment or throws if missing.
+ */
+export function getRootFolderId(): string {
+  const rootFolderId = process.env["GOOGLE_DRIVE_ROOT_FOLDER_ID"];
+  if (!rootFolderId) {
+    throw new Error("GOOGLE_DRIVE_ROOT_FOLDER_ID is not set in environment variables.");
+  }
+  return rootFolderId;
+}
+
+/**
+ * Asserts that a file's parents array includes the Root Folder ID (ADR 0002).
+ */
+export function assertRootFolderMembership(parents?: string[] | null): void {
+  const rootFolderId = getRootFolderId();
+  if (!parents || !parents.includes(rootFolderId)) {
+    throw new Error("Access Denied: File is outside the designated Root Folder.");
+  }
 }
 
 /**
@@ -30,10 +57,7 @@ export async function searchFiles(
   query: string,
   identity?: string,
 ): Promise<drive_v3.Schema$File[]> {
-  const rootFolderId = process.env["GOOGLE_DRIVE_ROOT_FOLDER_ID"];
-  if (!rootFolderId) {
-    throw new Error("GOOGLE_DRIVE_ROOT_FOLDER_ID is not set in environment variables.");
-  }
+  const rootFolderId = getRootFolderId();
 
   // ADR 0002: Root Folder Isolation
   const isolatedQuery = `(${query}) and '${rootFolderId}' in parents`;
@@ -59,15 +83,20 @@ export async function searchFiles(
 export async function fetchAndExportContent(
   drive: drive_v3.Drive,
   fileId: string,
+  preFetchedMeta?: DriveFileMetadata,
 ): Promise<DriveFileExportResult> {
-  // Step 1: fetch metadata (mimeType drives export vs raw download)
-  const metaRes = await drive.files.get({
-    fileId: fileId,
-    fields: "mimeType, name, parents",
-  });
-  const mimeType = metaRes.data.mimeType || "";
-  const name = metaRes.data.name || "";
-  const parents = metaRes.data.parents || [];
+  const meta =
+    preFetchedMeta ||
+    (
+      await drive.files.get({
+        fileId: fileId,
+        fields: "mimeType, name, parents",
+      })
+    ).data;
+
+  const mimeType = meta.mimeType || "";
+  const name = meta.name || "";
+  const parents = meta.parents || [];
 
   // Step 3: ADR 0003 Auto-Text Export for Google Workspace files, raw download otherwise
   let content: string;
@@ -92,7 +121,6 @@ export async function fetchAndExportContent(
  * Retrieves file content, automatically exporting Google Workspace files as plain text.
  */
 export async function getFileContent(fileId: string, identity?: string): Promise<string> {
-  const rootFolderId = process.env["GOOGLE_DRIVE_ROOT_FOLDER_ID"];
   console.error(
     `[Audit] User ${identity || "Unknown"} executing get_file_content for fileId: ${fileId}`,
   );
@@ -104,13 +132,10 @@ export async function getFileContent(fileId: string, identity?: string): Promise
     fileId: fileId,
     fields: "mimeType, name, parents",
   });
-  const parents = guardRes.data.parents || [];
-  if (rootFolderId && !parents.includes(rootFolderId)) {
-    throw new Error("Access Denied: File is outside the designated Root Folder.");
-  }
+  assertRootFolderMembership(guardRes.data.parents);
 
-  // Delegate the metadata + content work to the shared helper.
-  return await fetchAndExportContent(drive, fileId).then((r) => r.content);
+  // Delegate the metadata + content work to the shared helper (reusing pre-fetched metadata).
+  return (await fetchAndExportContent(drive, fileId, guardRes.data)).content;
 }
 
 /**
@@ -154,10 +179,7 @@ export async function createFile(
   mimeType = "text/plain",
   identity?: string,
 ): Promise<drive_v3.Schema$File> {
-  const rootFolderId = process.env["GOOGLE_DRIVE_ROOT_FOLDER_ID"];
-  if (!rootFolderId) {
-    throw new Error("GOOGLE_DRIVE_ROOT_FOLDER_ID is not set in environment variables.");
-  }
+  const rootFolderId = getRootFolderId();
 
   console.error(`[Audit] User ${identity || "Unknown"} executing create_file: ${name}`);
 
@@ -186,7 +208,6 @@ export async function updateFile(
   content: string,
   identity?: string,
 ): Promise<drive_v3.Schema$File> {
-  const rootFolderId = process.env["GOOGLE_DRIVE_ROOT_FOLDER_ID"];
   console.error(
     `[Audit] User ${identity || "Unknown"} executing update_file for fileId: ${fileId}`,
   );
@@ -197,11 +218,7 @@ export async function updateFile(
     fileId: fileId,
     fields: "parents",
   });
-
-  const parents = metaRes.data.parents || [];
-  if (rootFolderId && !parents.includes(rootFolderId)) {
-    throw new Error("Access Denied: File is outside the designated Root Folder.");
-  }
+  assertRootFolderMembership(metaRes.data.parents);
 
   const res = await drive.files.update({
     fileId: fileId,

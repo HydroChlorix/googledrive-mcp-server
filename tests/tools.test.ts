@@ -86,13 +86,6 @@ describe("Tools", () => {
           parents: ["root-123"],
         },
       });
-      mockDriveFilesGet.mockResolvedValueOnce({
-        data: {
-          mimeType: "application/vnd.google-apps.document",
-          name: "Doc",
-          parents: ["root-123"],
-        },
-      });
       mockDriveFilesExport.mockResolvedValueOnce({
         data: "workspace content",
       });
@@ -136,13 +129,6 @@ describe("Tools", () => {
           parents: ["root-123"],
         },
       });
-      mockDriveFilesGet.mockResolvedValueOnce({
-        data: {
-          mimeType: "text/plain",
-          name: "File",
-          parents: ["root-123"],
-        },
-      });
       mockDriveFilesGet.mockResolvedValueOnce({ data: "standard content" });
 
       const content = await getFileContent("file-456", "user@example.com");
@@ -153,10 +139,6 @@ describe("Tools", () => {
       });
       expect(mockDriveFilesGet).toHaveBeenNthCalledWith(2, {
         fileId: "file-456",
-        fields: "mimeType, name, parents",
-      });
-      expect(mockDriveFilesGet).toHaveBeenNthCalledWith(3, {
-        fileId: "file-456",
         alt: "media",
       });
       expect(content).toBe("standard content");
@@ -164,13 +146,6 @@ describe("Tools", () => {
 
     it("should log the operation with identity (ADR 0004)", async () => {
       process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID = "root-123";
-      mockDriveFilesGet.mockResolvedValueOnce({
-        data: {
-          mimeType: "text/plain",
-          name: "File",
-          parents: ["root-123"],
-        },
-      });
       mockDriveFilesGet.mockResolvedValueOnce({
         data: {
           mimeType: "text/plain",
