@@ -3,7 +3,11 @@
 !package.json
 !package-lock.json
 !tsconfig.json
+!biome.json
 !composer.json
+
+# Build outputs
+dist/
 
 # Environment variables
 .env*
@@ -23,3 +27,4 @@ Thumbs.db
 .gemini/
 .agents/
 memory/
+
