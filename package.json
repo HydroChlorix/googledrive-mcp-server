@@ -2,9 +2,16 @@
   "name": "googledrive-mcp-server",
   "version": "1.0.0",
   "description": "Local Google Drive MCP Server Integration via Service Account",
-  "main": "index.js",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "mcp-google-drive": "dist/index.js"
+  },
   "scripts": {
-    "test": "jest"
+    "build": "tsc",
+    "test": "vitest run",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write ."
   },
   "keywords": [
     "mcp",
@@ -21,6 +28,10 @@
     "pino": "^10.3.1"
   },
   "devDependencies": {
-    "jest": "^30.4.2"
+    "@biomejs/biome": "^1.9.4",
+    "@types/node": "^24.0.0",
+    "typescript": "^5.8.2",
+    "vitest": "^3.0.0"
   }
 }
+
