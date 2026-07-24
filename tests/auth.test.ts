@@ -33,7 +33,7 @@ describe("Auth Client", () => {
   });
 
   it("should initialize GoogleAuth without explicit credentials (relying on ADC)", async () => {
-    process.env.GOOGLE_APPLICATION_CREDENTIALS = undefined;
+    delete process.env.GOOGLE_APPLICATION_CREDENTIALS;
     const drive = await getDriveClient();
 
     expect(google.auth.GoogleAuth).toHaveBeenCalledWith({
