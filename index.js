@@ -3,8 +3,7 @@ const { Server } = require("@modelcontextprotocol/sdk/server/index.js");
 const { StdioServerTransport } = require("@modelcontextprotocol/sdk/server/stdio.js");
 const { CallToolRequestSchema, ListToolsRequestSchema } = require("@modelcontextprotocol/sdk/types.js");
 const { getDriveClient } = require('./src/auth.js');
-const { searchFiles, getFileContent, fetchDriveFileContent, createFile, updateFile, getIdentity } = require('./src/tools.js');
-const { parseDriveUrl } = require('./src/urlParser.js');
+const { searchFiles, getFileContent, getFileFromUrl, createFile, updateFile, getIdentity } = require('./src/tools.js');
 const logger = require('./src/logger.js');
 
 async function main() {
@@ -54,11 +53,11 @@ async function main() {
           },
           {
             name: "get_file_from_url",
-            description: "Read the content of a file using its Google Drive or Google Docs URL. Google Workspace documents will be exported as plain text automatically.",
+            description: "Read the content of a Google Drive file from a shared URL. Supports Drive, Docs, Sheets, and Slides links.",
             inputSchema: {
               type: "object",
               properties: {
-                url: { type: "string", description: "The Google Drive or Google Docs URL of the file to read." }
+                url: { type: "string", description: "A Google Drive URL" }
               },
               required: ["url"]
             }
@@ -110,10 +109,7 @@ async function main() {
             };
           }
           case "get_file_from_url": {
-            const { url } = request.params.arguments;
-            const fileId = parseDriveUrl(url);
-            console.error("[Audit] User " + (identity || "Unknown") + " executing get_file_from_url for URL: " + url);
-            const content = await fetchDriveFileContent(fileId, identity);
+            const content = await getFileFromUrl(request.params.arguments.url, identity);
             return {
               content: [{ type: "text", text: content }]
             };

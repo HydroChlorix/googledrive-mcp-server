@@ -42,6 +42,7 @@ If you encounter a `401 Unauthorized` or `403 Forbidden` error:
 
 ## 🛠️ AVAILABLE TOOLS
 - `search_files`: Automatically isolated to Root Folder via Query Injection.
-- `get_file_content`: Automatically exports Google Docs to `text/plain`.
+- `get_file_content`: Automatically exports Google Docs to `text/plain`. Requires Root Folder membership (ADR-0002).
+- `get_file_from_url`: Reads a Google Drive file from a shared URL. Supports Drive, Docs, Sheets, and Slides links. **No Root Folder check** — accepts externally shared files (ADR-0005). Auto-exports Google Workspace files as `text/plain` (ADR-0003).
 - `create_file`: Creates files directly in the Root Folder.
 - `update_file`: Updates files after verifying Root Folder membership.

@@ -1,4 +1,5 @@
 const { getDriveClient } = require('./auth');
+const { extractFileId } = require('./url-parser');
 
 /**
  * Extracts identity from environment or drive client.
@@ -37,50 +38,51 @@ async function searchFiles(query, identity) {
 }
 
 /**
- * Internal helper to fetch file metadata, perform auto-text export (ADR-0003)
- * for Google Workspace files, and read content for normal files. No Root Folder checks.
- * 
- * @param {string} fileId The ID of the file to fetch.
- * @param {string} identity The user identity from the token (for logging).
- * @param {Object} [preFetchedMeta] Optional pre-fetched file metadata.
- * @returns {Promise<string>} The file content.
+ * Fetches a Drive file's metadata and exports its content as plain text.
+ *
+ * Used by both `getFileContent` (which adds a Root Folder membership check)
+ * and the upcoming `get_file_from_url` tool (ADR-0005), which skips that check.
+ *
+ * @param {object} drive An authenticated googleapis drive client.
+ * @param {string} fileId The Drive file ID to fetch.
+ * @returns {Promise<{mimeType: string, name: string, parents: string[], content: string}>}
+ *   The file's metadata plus its exported/streamed content.
  */
-async function fetchDriveFileContent(fileId, identity, preFetchedMeta = null) {
-  const drive = await getDriveClient();
-  
-  let mimeType;
-  if (preFetchedMeta && preFetchedMeta.mimeType) {
-    mimeType = preFetchedMeta.mimeType;
-  } else {
-    const metaRes = await drive.files.get({
-      fileId: fileId,
-      fields: 'mimeType, name, parents'
-    });
-    mimeType = metaRes.data.mimeType;
-  }
+async function fetchAndExportContent(drive, fileId) {
+  // Step 1: fetch metadata (mimeType drives export vs raw download)
+  const metaRes = await drive.files.get({
+    fileId: fileId,
+    fields: 'mimeType, name, parents',
+  });
+  const mimeType = metaRes.data.mimeType;
+  const name = metaRes.data.name;
+  const parents = metaRes.data.parents || [];
 
-  // ADR 0003: Auto-Text Export
+  // Step 3: ADR 0003 Auto-Text Export for Google Workspace files, raw download otherwise
+  let content;
   if (mimeType.startsWith('application/vnd.google-apps.')) {
     const exportRes = await drive.files.export({
       fileId: fileId,
-      mimeType: 'text/plain'
+      mimeType: 'text/plain',
     });
-    return typeof exportRes.data === 'string' ? exportRes.data : JSON.stringify(exportRes.data);
+    content = typeof exportRes.data === 'string' ? exportRes.data : JSON.stringify(exportRes.data);
   } else {
     const getRes = await drive.files.get({
       fileId: fileId,
-      alt: 'media'
+      alt: 'media',
     });
-    // Depending on the file type, getRes.data might be a stream or buffer. 
-    // Assuming mostly text-based interaction for LLMs.
-    return typeof getRes.data === 'string' ? getRes.data : JSON.stringify(getRes.data);
+    content = typeof getRes.data === 'string' ? getRes.data : JSON.stringify(getRes.data);
   }
+
+  return { mimeType, name, parents, content };
 }
 
 /**
  * Retrieves file content, automatically exporting Google Workspace files as plain text.
- * Enforces Root Folder isolation.
- * 
+ *
+ * Performs an ADR-0002 Root Folder membership check before delegating metadata +
+ * content retrieval to the shared `fetchAndExportContent` helper.
+ *
  * @param {string} fileId The ID of the file to read.
  * @param {string} identity The user identity from the token (for logging).
  * @returns {Promise<string>} The file content.
@@ -88,22 +90,67 @@ async function fetchDriveFileContent(fileId, identity, preFetchedMeta = null) {
 async function getFileContent(fileId, identity) {
   const rootFolderId = process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID;
   console.error(`[Audit] User ${identity || 'Unknown'} executing get_file_content for fileId: ${fileId}`);
-  
-  const drive = await getDriveClient();
-  
-  // First, get file metadata to check mimeType and parents (ADR 0002)
-  const metaRes = await drive.files.get({
-    fileId: fileId,
-    fields: 'mimeType, name, parents'
-  });
-  
-  const parents = metaRes.data.parents || [];
 
+  const drive = await getDriveClient();
+
+  // ADR 0002: perform Root Folder check BEFORE delegating to the helper.
+  // We do our own metadata fetch here so that an out-of-folder file never
+  // has its content streamed into memory by the helper.
+  const guardRes = await drive.files.get({
+    fileId: fileId,
+    fields: 'mimeType, name, parents',
+  });
+  const parents = guardRes.data.parents || [];
   if (rootFolderId && !parents.includes(rootFolderId)) {
     throw new Error('Access Denied: File is outside the designated Root Folder.');
   }
 
-  return fetchDriveFileContent(fileId, identity, metaRes.data);
+  // Delegate the metadata + content work to the shared helper.
+  return await fetchAndExportContent(drive, fileId).then((r) => r.content);
+}
+
+/**
+ * Reads a Google Drive file from a shared URL, exporting Google Workspace
+ * files as plain text (ADR-0003). Per ADR-0005, no Root Folder membership
+ * check is performed (ADR-0002) — this tool is for externally shared files.
+ *
+ * @param {string} url A full Google Drive URL (see url-parser for accepted shapes).
+ * @param {string} identity The user identity from the token (for logging).
+ * @returns {Promise<string>} The file content as text.
+ */
+async function getFileFromUrl(url, identity) {
+  // Parse first so a bad URL fails fast with a clear message (not a crash).
+  const fileId = extractFileId(url);
+
+  // ADR 0004: Identity-Rich Logging
+  console.error(
+    `[Audit] User ${identity || 'Unknown'} executing get_file_from_url for url: ${url} (resolved fileId: ${fileId})`
+  );
+
+  const drive = await getDriveClient();
+  try {
+    const result = await fetchAndExportContent(drive, fileId);
+    return result.content;
+  } catch (apiErr) {
+    // Wrap Drive API errors with actionable guidance (User-Friendly Auth Errors).
+    const status = apiErr.code || apiErr.response?.status;
+    const original = apiErr.message || String(apiErr);
+    if (status === 403) {
+      throw new Error(
+        `Access Denied: Service Account cannot read fileId ${fileId}. ` +
+        `Share the file with the Service Account's email address via Drive's "Share" button, ` +
+        `or revoke restricted-link sharing. Original error: ${original}`
+      );
+    }
+    if (status === 404) {
+      throw new Error(
+        `File Not Found: fileId ${fileId} could not be located. ` +
+        `The link may be stale, the file may be in trash, or sharing may be restricted. ` +
+        `Original error: ${original}`
+      );
+    }
+    throw apiErr;
+  }
 }
 
 /**
@@ -179,7 +226,8 @@ async function updateFile(fileId, content, identity) {
 module.exports = {
   searchFiles,
   getFileContent,
-  fetchDriveFileContent,
+  getFileFromUrl,
+  fetchAndExportContent,
   createFile,
   updateFile,
   getIdentity
