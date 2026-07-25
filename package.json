@@ -1,6 +1,6 @@
 {
   "name": "googledrive-mcp-server",
-  "version": "1.0.0",
+  "version": "1.1.1",
   "description": "Local Google Drive MCP Server Integration via Service Account",
   "type": "module",
   "main": "dist/index.js",
