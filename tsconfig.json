@@ -1,19 +1,37 @@
 {
   "compilerOptions": {
+    /* 1. Base Environment (Node.js 20+) */
     "target": "ES2023",
+    "lib": ["ES2023"],
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
-    "strict": true,
-    "isolatedModules": true,
-    "noPropertyAccessFromIndexSignature": true,
-    "noImplicitOverride": true,
-    "allowUnreachableCode": false,
-    "allowUnusedLabels": false,
-    "erasableSyntaxOnly": true,
+    "types": ["node"],
+
+    /* 2. Build & Output (ทำงานร่วมกับ Vite) */
     "outDir": "./dist",
     "rootDir": "./src",
+    "sourceMap": true,
+    "declaration": true,
+    "isolatedDeclarations": true,
+
+    /* 3. Strict Type-Checking (ความปลอดภัยสูงสุด) */
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+
+    /* 4. Interop & Performance */
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
     "skipLibCheck": true,
-    "esModuleInterop": true
+    "forceConsistentCasingInFileNames": true
   },
-  "include": ["src/**/*"]
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "tests"]
 }
