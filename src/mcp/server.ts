@@ -9,6 +9,38 @@ export const server: McpServer = new McpServer({
   version: "2.0.0",
 });
 
+async function handleToolExecution<T>(
+  actionFn: () => Promise<T>,
+  formatSuccess?: (result: T) => string,
+) {
+  try {
+    const result = await actionFn();
+    const text = formatSuccess
+      ? formatSuccess(result)
+      : typeof result === "string"
+        ? result
+        : JSON.stringify(result, null, 2);
+    return {
+      content: [
+        {
+          type: "text" as const,
+          text,
+        },
+      ],
+    };
+  } catch (error) {
+    return {
+      isError: true,
+      content: [
+        {
+          type: "text" as const,
+          text: `❌ Execution Error: ${error instanceof Error ? error.message : String(error)}`,
+        },
+      ],
+    };
+  }
+}
+
 server.tool(
   "drive_list_files",
   "List files in Google Drive. You can specify pageSize (max 100) and a search query.",
@@ -24,29 +56,7 @@ server.tool(
       .optional()
       .describe('Google Drive search query string (e.g. name contains "report")'),
   },
-  async (args) => {
-    try {
-      const files = await listFiles(args);
-      return {
-        content: [
-          {
-            type: "text",
-            text: JSON.stringify(files, null, 2),
-          },
-        ],
-      };
-    } catch (error) {
-      return {
-        isError: true,
-        content: [
-          {
-            type: "text",
-            text: `❌ Execution Error: ${error instanceof Error ? error.message : String(error)}`,
-          },
-        ],
-      };
-    }
-  },
+  async (args) => handleToolExecution(() => listFiles(args)),
 );
 
 server.tool(
@@ -57,29 +67,11 @@ server.tool(
     content: z.string().min(1, "File content cannot be empty").describe("Text content of the file"),
     parentId: z.string().optional().describe("Optional ID of the parent folder"),
   },
-  async (args) => {
-    try {
-      const file = await uploadTextFile(args.name, args.content, args.parentId);
-      return {
-        content: [
-          {
-            type: "text",
-            text: `✅ Successfully uploaded file:\n${JSON.stringify(file, null, 2)}`,
-          },
-        ],
-      };
-    } catch (error) {
-      return {
-        isError: true,
-        content: [
-          {
-            type: "text",
-            text: `❌ Execution Error: ${error instanceof Error ? error.message : String(error)}`,
-          },
-        ],
-      };
-    }
-  },
+  async (args) =>
+    handleToolExecution(
+      () => uploadTextFile(args.name, args.content, args.parentId),
+      (file) => `✅ Successfully uploaded file:\n${JSON.stringify(file, null, 2)}`,
+    ),
 );
 
 server.tool(
@@ -89,29 +81,11 @@ server.tool(
     name: z.string().min(1, "Folder name is required").describe("Name of the new folder"),
     parentId: z.string().optional().describe("Optional ID of the parent folder"),
   },
-  async (args) => {
-    try {
-      const folder = await createFolder(args.name, args.parentId);
-      return {
-        content: [
-          {
-            type: "text",
-            text: `✅ Successfully created folder:\n${JSON.stringify(folder, null, 2)}`,
-          },
-        ],
-      };
-    } catch (error) {
-      return {
-        isError: true,
-        content: [
-          {
-            type: "text",
-            text: `❌ Execution Error: ${error instanceof Error ? error.message : String(error)}`,
-          },
-        ],
-      };
-    }
-  },
+  async (args) =>
+    handleToolExecution(
+      () => createFolder(args.name, args.parentId),
+      (folder) => `✅ Successfully created folder:\n${JSON.stringify(folder, null, 2)}`,
+    ),
 );
 
 server.tool(
@@ -124,29 +98,11 @@ server.tool(
       .min(1, "Destination path (Local) is required")
       .describe("Local destination path (e.g. ./downloads/image.jpg)"),
   },
-  async (args) => {
-    try {
-      const savedPath = await downloadFile(args.fileId, args.destPath);
-      return {
-        content: [
-          {
-            type: "text",
-            text: `✅ Successfully downloaded file to local path:\n${savedPath}`,
-          },
-        ],
-      };
-    } catch (error) {
-      return {
-        isError: true,
-        content: [
-          {
-            type: "text",
-            text: `❌ Execution Error: ${error instanceof Error ? error.message : String(error)}`,
-          },
-        ],
-      };
-    }
-  },
+  async (args) =>
+    handleToolExecution(
+      () => downloadFile(args.fileId, args.destPath),
+      (savedPath) => `✅ Successfully downloaded file to local path:\n${savedPath}`,
+    ),
 );
 
 export async function startMcpServer(): Promise<void> {

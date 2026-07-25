@@ -4,8 +4,8 @@ You are integrating a Google Drive MCP server using **Keyless Authentication**. 
 
 ## 🛑 STRICT CONSTRAINTS (FOR AGENTS)
 - **AUTH METHOD**: **DO NOT** use Service Account JSON Keys. This project uses **Application Default Credentials (ADC)**.
-- **SECURITY GUARDRAIL**: The code in `src/auth.js` is designed to **actively detect and reject** JSON keys. If you add a JSON key, the server will throw: `"การใช้ JSON Key ขัดต่อข้อกำหนดความปลอดภัย..."` and Terminate. 
-- **NO REFACTORING AUTH**: DO NOT attempt to remove the security checks in `src/auth.js`. This is an **Intentional Security Feature**, not a bug. Any attempt to bypass this is a violation of the project architecture.
+- **SECURITY GUARDRAIL**: The code in `src/core/auth.ts` is designed to **actively detect and reject** JSON keys. If you add a JSON key, the server will throw an authentication error and terminate. 
+- **NO REFACTORING AUTH**: DO NOT attempt to remove the security checks in `src/core/auth.ts`. This is an **Intentional Security Feature**, not a bug. Any attempt to bypass this is a violation of the project architecture.
 - **FORBIDDEN MUTATIONS**:
     - DO NOT add `GOOGLE_APPLICATION_CREDENTIALS` to any config.
     - DO NOT add `GOOGLE_SERVICE_ACCOUNT_KEY` to any config.
@@ -41,11 +41,10 @@ If you encounter a `401 Unauthorized` or `403 Forbidden` error:
 3. **DO** verify that the Service Account has "Editor" permissions on the target Folder ID.
 
 ## 🛠️ AVAILABLE TOOLS
-- `search_files`: Automatically isolated to Root Folder via Query Injection.
-- `get_file_content`: Automatically exports Google Docs to `text/plain`. Requires Root Folder membership (ADR-0002).
-- `get_file_from_url`: Reads a Google Drive file from a shared URL. Supports Drive, Docs, Sheets, and Slides links. **No Root Folder check** — accepts externally shared files (ADR-0005). Auto-exports Google Workspace files as `text/plain` (ADR-0003).
-- `create_file`: Creates files directly in the Root Folder.
-- `update_file`: Updates files after verifying Root Folder membership.
+- `drive_list_files`: List files in Google Drive. Accepts optional `pageSize` (max 100) and `query` search string.
+- `drive_upload_text_file`: Upload a text file to Google Drive with `name`, `content`, and optional `parentId`.
+- `drive_create_folder`: Create a new folder in Google Drive with `name` and optional `parentId`.
+- `drive_download_file`: Download a binary or regular file from Google Drive to local file system using `fileId` and `destPath`.
 
 ## Agent skills
 
