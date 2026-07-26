@@ -4,7 +4,7 @@ import { main } from "../src/index.js";
 
 // Mock Stdio Transport
 vi.mock("@modelcontextprotocol/sdk/server/stdio.js", () => ({
-  StdioServerTransport: vi.fn().mockImplementation(() => ({})),
+  StdioServerTransport: vi.fn(class {}),
 }));
 
 // Mock Server

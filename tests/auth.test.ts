@@ -9,7 +9,7 @@ vi.mock("googleapis", () => {
   return {
     google: {
       auth: {
-        GoogleAuth: vi.fn().mockImplementation(() => ({})),
+        GoogleAuth: vi.fn(class {}),
       },
       drive: vi.fn().mockReturnValue(mockDrive),
     },
