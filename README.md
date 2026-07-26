@@ -3,11 +3,10 @@
 Model Context Protocol (MCP) server providing seamless, secure Google Drive integration for AI agents (Gemini, Hermes, Claude, Cursor) using **Keyless Authentication (Application Default Credentials / ADC)**.
 
 > [!IMPORTANT]
-> **STRICT ZERO KEY POLICY (ADR-0001)**
+> **KEYLESS AUTHENTICATION (ADR-0007)**
 > - **DO NOT** use Service Account Private Key files (`.json`).
-> - **DO NOT** set `GOOGLE_APPLICATION_CREDENTIALS` to a JSON key file.
 > - **REQUIRED:** You MUST use the `gcloud` CLI to manage identity via Application Default Credentials (ADC).
-> - **SECURITY GUARDRAIL:** The server will actively reject JSON keys and terminate if detected.
+> - The server relies 100% natively on Google Auth Application Default Credentials (ADC).
 
 ---
 

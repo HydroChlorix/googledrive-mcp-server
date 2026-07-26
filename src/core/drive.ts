@@ -3,6 +3,7 @@ import * as path from "node:path";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import type { drive_v3 } from "googleapis";
+import { translateDriveError } from "../utils/authErrorAdapter.js";
 import { getDriveClient } from "./auth.js";
 
 // 1. นิยามโครงสร้างข้อมูลที่จะส่งกลับ
@@ -20,8 +21,11 @@ export interface ListFilesOptions {
 /**
  * ดึงรายการไฟล์จาก Google Drive
  */
-export async function listFiles(options: ListFilesOptions = {}): Promise<DriveFile[]> {
-  const drive = await getDriveClient();
+export async function listFiles(
+  options: ListFilesOptions = {},
+  client?: drive_v3.Drive,
+): Promise<DriveFile[]> {
+  const drive = client ?? (await getDriveClient());
   const { pageSize = 10, query } = options;
 
   try {
@@ -47,8 +51,7 @@ export async function listFiles(options: ListFilesOptions = {}): Promise<DriveFi
     }));
   } catch (error) {
     console.error("❌ Error in core.listFiles:", error);
-    const detail = error instanceof Error ? error.message : String(error);
-    throw new Error(`Failed to list files from Google Drive (${detail})`);
+    throw translateDriveError(error, "core.listFiles");
   }
 }
 
@@ -59,8 +62,9 @@ export async function uploadTextFile(
   name: string,
   content: string,
   parentId?: string,
+  client?: drive_v3.Drive,
 ): Promise<DriveFile> {
-  const drive = await getDriveClient();
+  const drive = client ?? (await getDriveClient());
 
   // 2. ใช้ Type ที่ Google เตรียมไว้ให้ (Schema$File)
   const fileMetadata: drive_v3.Schema$File = {
@@ -95,16 +99,19 @@ export async function uploadTextFile(
     };
   } catch (error) {
     console.error("❌ Error in core.uploadTextFile:", error);
-    const detail = error instanceof Error ? error.message : String(error);
-    throw new Error(`Failed to upload file: ${name} (${detail})`);
+    throw translateDriveError(error, `core.uploadTextFile for ${name}`);
   }
 }
 
 /**
  * สร้างโฟลเดอร์ใหม่ใน Google Drive
  */
-export async function createFolder(name: string, parentId?: string): Promise<DriveFile> {
-  const drive = await getDriveClient();
+export async function createFolder(
+  name: string,
+  parentId?: string,
+  client?: drive_v3.Drive,
+): Promise<DriveFile> {
+  const drive = client ?? (await getDriveClient());
 
   const fileMetadata: drive_v3.Schema$File = {
     name,
@@ -131,17 +138,20 @@ export async function createFolder(name: string, parentId?: string): Promise<Dri
     };
   } catch (error) {
     console.error("❌ Error in core.createFolder:", error);
-    const detail = error instanceof Error ? error.message : String(error);
-    throw new Error(`Failed to create folder: ${name} (${detail})`);
+    throw translateDriveError(error, `core.createFolder for ${name}`);
   }
 }
 
 /**
  * ดาวน์โหลดไฟล์จาก Google Drive มาบันทึกลงใน Local File System
- * (รองรับเฉพาะไฟล์ทั่วไป เช่น รูปภาพ, วิดีโอ, PDF, Text. ไม่รองรับ Google Docs/Sheets)
+ * (รองรับไฟล์ทั่วไป และส่งออกไฟล์ Google Workspace เป็น text/plain อัตโนมัติ ตาม ADR-0003)
  */
-export async function downloadFile(fileId: string, destPath: string): Promise<string> {
-  const drive = await getDriveClient();
+export async function downloadFile(
+  fileId: string,
+  destPath: string,
+  client?: drive_v3.Drive,
+): Promise<string> {
+  const drive = client ?? (await getDriveClient());
 
   try {
     const dir = path.dirname(destPath);
@@ -149,21 +159,39 @@ export async function downloadFile(fileId: string, destPath: string): Promise<st
       fs.mkdirSync(dir, { recursive: true });
     }
 
-    // กำหนด responseType เป็น stream เพื่อไม่ให้กิน Memory หากไฟล์ใหญ่
-    const response = await drive.files.get(
-      { fileId, alt: "media", supportsAllDrives: true },
-      { responseType: "stream" },
-    );
+    // 1. ตรวจสอบ Metadata เพื่อเช็กว่า เป็น Google Workspace Document หรือไม่ (ADR-0003)
+    const metaResponse = await drive.files.get({
+      fileId,
+      fields: "id, name, mimeType",
+      supportsAllDrives: true,
+    });
+
+    const mimeType = metaResponse.data.mimeType ?? "";
+    const isWorkspaceDoc =
+      mimeType.startsWith("application/vnd.google-apps.") &&
+      mimeType !== "application/vnd.google-apps.folder";
 
     const dest = fs.createWriteStream(destPath);
 
-    // โอนถ่ายข้อมูลจาก API ลงไฟล์ตรงๆ
-    await pipeline(response.data, dest);
+    if (isWorkspaceDoc) {
+      // 2. ถ้าเป็น Google Docs/Sheets/Slides ให้ส่งออกเป็น text/plain
+      const exportResponse = await drive.files.export(
+        { fileId, mimeType: "text/plain" },
+        { responseType: "stream" },
+      );
+      await pipeline(exportResponse.data, dest);
+    } else {
+      // 3. ถ้าเป็นไฟล์ทั่วไป (Binary/Text) ให้ดาวน์โหลดปกติ
+      const getResponse = await drive.files.get(
+        { fileId, alt: "media", supportsAllDrives: true },
+        { responseType: "stream" },
+      );
+      await pipeline(getResponse.data, dest);
+    }
 
     return destPath;
   } catch (error) {
     console.error(`❌ Error in core.downloadFile for ID ${fileId}:`, error);
-    const detail = error instanceof Error ? error.message : String(error);
-    throw new Error(`Failed to download file ID: ${fileId} (${detail})`);
+    throw translateDriveError(error, `core.downloadFile for ID ${fileId}`);
   }
 }

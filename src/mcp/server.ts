@@ -4,31 +4,22 @@ import { z } from "zod";
 
 import { createFolder, downloadFile, listFiles, uploadTextFile } from "../core/drive.js";
 
+import { defaultAuditLogger } from "../utils/auditLogger.js";
+
 export const server: McpServer = new McpServer({
   name: "googledrive-mcp-server",
   version: "2.0.0",
 });
 
 async function handleToolExecution<T>(
+  toolName: string,
+  args: Record<string, unknown>,
   actionFn: () => Promise<T>,
   formatSuccess?: (result: T) => string,
 ) {
-  try {
-    const result = await actionFn();
-    const text = formatSuccess
-      ? formatSuccess(result)
-      : typeof result === "string"
-        ? result
-        : JSON.stringify(result, null, 2);
-    return {
-      content: [
-        {
-          type: "text" as const,
-          text,
-        },
-      ],
-    };
-  } catch (error) {
+  const { result, error } = await defaultAuditLogger.logExecution(toolName, args, actionFn);
+
+  if (error !== undefined) {
     return {
       isError: true,
       content: [
@@ -39,6 +30,21 @@ async function handleToolExecution<T>(
       ],
     };
   }
+
+  const text = formatSuccess
+    ? formatSuccess(result as T)
+    : typeof result === "string"
+      ? result
+      : JSON.stringify(result, null, 2);
+
+  return {
+    content: [
+      {
+        type: "text" as const,
+        text,
+      },
+    ],
+  };
 }
 
 server.tool(
@@ -56,7 +62,7 @@ server.tool(
       .optional()
       .describe('Google Drive search query string (e.g. name contains "report")'),
   },
-  async (args) => handleToolExecution(() => listFiles(args)),
+  async (args) => handleToolExecution("drive_list_files", args, () => listFiles(args)),
 );
 
 server.tool(
@@ -69,6 +75,8 @@ server.tool(
   },
   async (args) =>
     handleToolExecution(
+      "drive_upload_text_file",
+      args,
       () => uploadTextFile(args.name, args.content, args.parentId),
       (file) => `✅ Successfully uploaded file:\n${JSON.stringify(file, null, 2)}`,
     ),
@@ -83,6 +91,8 @@ server.tool(
   },
   async (args) =>
     handleToolExecution(
+      "drive_create_folder",
+      args,
       () => createFolder(args.name, args.parentId),
       (folder) => `✅ Successfully created folder:\n${JSON.stringify(folder, null, 2)}`,
     ),
@@ -100,6 +110,8 @@ server.tool(
   },
   async (args) =>
     handleToolExecution(
+      "drive_download_file",
+      args,
       () => downloadFile(args.fileId, args.destPath),
       (savedPath) => `✅ Successfully downloaded file to local path:\n${savedPath}`,
     ),

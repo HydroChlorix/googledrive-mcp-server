@@ -1,26 +1,22 @@
 import { type drive_v3, google } from "googleapis";
 
-// 1. กำหนดสิทธิ์ที่ต้องการ (Scopes)
-// แนะนำให้ใช้สิทธิ์แบบกว้างสำหรับการทำ Agent แต่ถ้าอยากจำกัดความปลอดภัย สามารถเปลี่ยนเป็น '.../drive.readonly' ได้
+// 1. Scope definition for Google Drive API
 const SCOPES = ["https://www.googleapis.com/auth/drive"];
 
-// ตัวแปรเก็บ Instance ของ Drive Client ไว้ใช้ซ้ำ (Singleton)
+// Singleton instance for Google Drive Client
 let driveClientInstance: drive_v3.Drive | null = null;
 
 export async function getDriveClient(): Promise<drive_v3.Drive> {
-  // ถ้ามี Client อยู่แล้ว ให้ Return กลับไปเลย ไม่ต้อง Auth ใหม่
   if (driveClientInstance) {
     return driveClientInstance;
   }
 
   try {
-    // 2. ใช้ GoogleAuth ซึ่งเป็นมาตรฐานใหม่
-    // มันจะวิ่งหาไฟล์ Key อัตโนมัติจาก Environment Variable: GOOGLE_APPLICATION_CREDENTIALS
+    // Uses Keyless Application Default Credentials (ADC) natively
     const auth = new google.auth.GoogleAuth({
       scopes: SCOPES,
     });
 
-    // 3. สร้าง Drive Client
     driveClientInstance = google.drive({ version: "v3", auth });
 
     console.error("✅ Google Drive API client initialized successfully.");

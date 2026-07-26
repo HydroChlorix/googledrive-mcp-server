@@ -27,6 +27,7 @@ describe("Google Drive Core Module", () => {
       list: vi.fn(),
       create: vi.fn(),
       get: vi.fn(),
+      export: vi.fn(),
     },
   };
 
@@ -92,9 +93,6 @@ describe("Google Drive Core Module", () => {
     });
   });
 
-  // ---------------------------------------------------------
-  // เพิ่ม Test สำหรับ createFolder
-  // ---------------------------------------------------------
   describe("createFolder", () => {
     it("should create a folder successfully with correct mimeType", async () => {
       mockDriveClient.files.create.mockResolvedValue({
@@ -126,45 +124,67 @@ describe("Google Drive Core Module", () => {
     });
   });
 
-  // ---------------------------------------------------------
-  // เพิ่ม Test สำหรับ downloadFile
-  // ---------------------------------------------------------
   describe("downloadFile", () => {
-    it("should download a file and stream it to the local destination", async () => {
-      // จำลอง Stream object ที่คืนมาจาก Google Drive API
-      const mockResponseStream = { on: vi.fn(), pipe: vi.fn() };
-      mockDriveClient.files.get.mockResolvedValue({
-        data: mockResponseStream,
+    it("should download a standard file and stream it to the local destination", async () => {
+      // จำลอง Metadata สำหรับไฟล์ทั่วไป
+      mockDriveClient.files.get.mockImplementation((params) => {
+        if (params.fields) {
+          return Promise.resolve({
+            data: { id: "target-file-id", name: "image.jpg", mimeType: "image/jpeg" },
+          });
+        }
+        return Promise.resolve({
+          data: { on: vi.fn(), pipe: vi.fn() },
+        });
       });
 
-      // จำลอง WriteStream ของระบบไฟล์ Local
       const mockWriteStream = { write: vi.fn(), end: vi.fn() };
       vi.mocked(fs.createWriteStream).mockReturnValue(mockWriteStream as unknown as fs.WriteStream);
       vi.mocked(fs.existsSync).mockReturnValue(false);
-
-      // จำลองว่า pipeline ทำงานเสร็จสมบูรณ์แบบไม่ติดขัด
       vi.mocked(pipeline).mockResolvedValue(undefined);
 
       const destPath = "./downloads/test-image.jpg";
       const result = await downloadFile("target-file-id", destPath);
 
-      // ตรวจสอบว่าเช็คและสร้างโฟลเดอร์ปลายทาง
       expect(fs.existsSync).toHaveBeenCalledWith("./downloads");
       expect(fs.mkdirSync).toHaveBeenCalledWith("./downloads", { recursive: true });
 
-      // ตรวจสอบว่าเรียก API โดยระบุ alt: 'media' และ responseType: 'stream'
       expect(mockDriveClient.files.get).toHaveBeenCalledWith(
         { fileId: "target-file-id", alt: "media", supportsAllDrives: true },
         { responseType: "stream" },
       );
 
-      // ตรวจสอบว่าเปิดไฟล์ปลายทางถูกต้อง
-      expect(fs.createWriteStream).toHaveBeenCalledWith(destPath);
+      expect(result).toBe(destPath);
+    });
 
-      // ตรวจสอบว่าจับคู่ข้อมูลจาก Response ลง Local File ถูกต้อง
-      expect(pipeline).toHaveBeenCalledWith(mockResponseStream, mockWriteStream);
+    it("should export a Google Workspace Document to text/plain (ADR-0003)", async () => {
+      // จำลอง Metadata สำหรับ Google Docs
+      mockDriveClient.files.get.mockResolvedValue({
+        data: {
+          id: "doc-file-id",
+          name: "Project Report",
+          mimeType: "application/vnd.google-apps.document",
+        },
+      });
 
-      // ตรวจสอบผลลัพธ์
+      const mockExportStream = { on: vi.fn(), pipe: vi.fn() };
+      mockDriveClient.files.export.mockResolvedValue({
+        data: mockExportStream,
+      });
+
+      const mockWriteStream = { write: vi.fn(), end: vi.fn() };
+      vi.mocked(fs.createWriteStream).mockReturnValue(mockWriteStream as unknown as fs.WriteStream);
+      vi.mocked(fs.existsSync).mockReturnValue(true);
+      vi.mocked(pipeline).mockResolvedValue(undefined);
+
+      const destPath = "./downloads/report.txt";
+      const result = await downloadFile("doc-file-id", destPath);
+
+      expect(mockDriveClient.files.export).toHaveBeenCalledWith(
+        { fileId: "doc-file-id", mimeType: "text/plain" },
+        { responseType: "stream" },
+      );
+
       expect(result).toBe(destPath);
     });
   });
