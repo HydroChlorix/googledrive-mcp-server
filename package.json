@@ -6,7 +6,7 @@
   "main": "dist/server.mjs",
   "types": "dist/server.d.ts",
   "bin": {
-    "googledrive-mcp-server": "./dist/server.mjs"
+    "googledrive-mcp-server": "dist/server.mjs"
   },
   "files": ["dist", "README.md", "LICENSE"],
   "publishConfig": {
