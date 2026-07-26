@@ -4,7 +4,7 @@
 **Keyless Authentication via Workload Identity Federation (WIF) & ADC for Google Drive MCP Server**
 
 ## 1. Objective
-To elevate the security posture of the Google Drive MCP Server by **permanently deprecating the use of long-lived Service Account Keys (JSON files)**. We are migrating to a Keyless Authentication architecture leveraging **Workload Identity Federation (WIF)** for external environments (e.g., CI/CD, AWS, GitHub Actions) and **Service Account Impersonation (ADC)** for Local Development, drastically mitigating credential leakage risks.
+To elevate the security posture of the Google Drive MCP Server by **permanently deprecating the use of long-lived Service Account Keys (JSON files)**. We are migrating to a Keyless Authentication architecture leveraging **Workload Identity Federation (WIF)** for external environments (e.g., CI/CD, AWS, GitHub Actions) and **Service Account Impersonation (ADC)** for Local Development, drastically mitigating credential leakage risks. Access control is dynamically managed via Google Drive folder permissions without requiring environment variables.
 
 ## 2. Architecture & Components
 Authentication mechanisms are bifurcated based on the execution environment:
@@ -23,6 +23,7 @@ Authentication mechanisms are bifurcated based on the execution environment:
 * **Zero Key Policy:** The creation or downloading of Private Key JSON files from the Service Account console is strictly prohibited.
 * **Role Requirements (Local):** The developer's Google Account must possess the `roles/iam.serviceAccountTokenCreator` role to facilitate impersonation.
 * **Role Requirements (Production WIF):** External identities (e.g., a specific GitHub Repository) must be granted permission via the Identity Pool to act as a `Workload Identity User` for the target Service Account.
+* **Permission-Based Access:** Accessible folders/files are dynamically determined by sharing target folders/files with the Service Account email address in Google Drive.
 
 ## 4. Implementation Steps (Infrastructure & Config)
 
@@ -47,7 +48,7 @@ Authentication mechanisms are bifurcated based on the execution environment:
 
 ## 5. Target MCP Server Configuration (Environment Agnostic)
 
-To seamlessly support both environments, the MCP Server (e.g., Gemini CLI or Hermes) will be configured with a standardized execution command. Authentication handling is delegated entirely to the presence (or absence) of Environment Variables:
+To seamlessly support both environments, the MCP Server (e.g., Gemini CLI or Hermes) will be configured with a standardized execution command. No folder environment variables are required:
 
 ```yaml
 mcpServers:
@@ -56,14 +57,6 @@ mcpServers:
     args: 
       - "-y"
       - "mcp-google-drive"
-    env:
-      # [CRITICAL] For Local Dev: REMOVE this line entirely.
-      # For Production: Point this to the wif-credential-config.json file.
-      GOOGLE_APPLICATION_CREDENTIALS: "${GOOGLE_APPLICATION_CREDENTIALS_PATH_IF_ANY}"
-      
-      # The target Folder ID authorized for write access.
-      GOOGLE_DRIVE_ROOT_FOLDER_ID: "${GOOGLE_DRIVE_ROOT_FOLDER_ID}"
-
 ```
 
 ## 6. Acceptance Criteria

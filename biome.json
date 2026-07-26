@@ -8,7 +8,8 @@
     "rules": {
       "recommended": true,
       "suspicious": {
-        "noExplicitAny": "error"
+        "noExplicitAny": "error",
+        "noConsoleLog": "error"
       },
       "complexity": {
         "useLiteralKeys": "off"

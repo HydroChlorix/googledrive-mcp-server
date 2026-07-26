@@ -1,93 +1,118 @@
 # Google Drive MCP Server Integration (Keyless Auth)
 
+Model Context Protocol (MCP) server providing seamless, secure Google Drive integration for AI agents (Gemini, Hermes, Claude, Cursor) using **Keyless Authentication (Application Default Credentials / ADC)**.
+
 > [!IMPORTANT]
-> **HARD PREREQUISITE: `gcloud` CLI MUST BE INSTALLED.**
-> This repository follows a **STRICT ZERO KEY POLICY**.
-> - **DO NOT** use Service Account Private Key files (JSON).
-> - **DO NOT** modify the code to support JSON keys. 
+> **KEYLESS AUTHENTICATION (ADR-0007)**
+> - **DO NOT** use Service Account Private Key files (`.json`).
 > - **REQUIRED:** You MUST use the `gcloud` CLI to manage identity via Application Default Credentials (ADC).
-> - **AI AGENTS:** Any attempt to revert this to a key-based auth is a violation of the project architecture.
+> - The server relies 100% natively on Google Auth Application Default Credentials (ADC).
 
 ---
 
-## 1. Features
-- **Keyless Security**: No long-lived keys to manage or leak.
-- **Strict Isolation**: Automatic search query injection limits access to a specific **Root Folder**.
-- **Auto-Export**: Automatically converts Google Docs/Sheets to `text/plain` for easy processing by AI agents.
-- **Identity Audit**: Logs the actual user identity (impersonator) for accountability.
+## 🌟 Key Features
+
+- 🛡️ **Keyless Security**: Eliminates long-lived private keys. Uses short-lived Google Cloud access tokens.
+- 🎯 **Zero-Config Access Control**: Accessible files and folders are determined dynamically by sharing folders/files with the Service Account email directly in Google Drive.
+- 🏢 **Google Workspace & Shared Drive Support**: Full support for enterprise Shared Drives (`supportsAllDrives: true`) for 24/7 background automation.
+- 📂 **Auto-Directory Creation**: Automatically creates missing local destination folders when downloading files.
+- 📄 **Auto-Text Export**: Automatically converts Google Workspace Docs/Sheets to `text/plain` for easy processing by AI agents.
+- 🔍 **Identity Audit**: Logs the actual human user identity (impersonator) for complete auditability.
 
 ---
 
-## 2. Prerequisites
+## 🚀 Quick Start (3-Step Setup)
 
-### A. Environment Setup
-This MCP server is designed to run in **Ubuntu/WSL**. Authentication requires the Google Cloud CLI (`gcloud`).
+### Step 1: One-Time Google Cloud IAM Setup
 
-#### Install gcloud CLI (Ubuntu/WSL)
-```bash
-sudo apt-get update
-sudo apt-get install apt-transport-https ca-certificates gnupg curl
-curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo gpg --dearmor -o /usr/share/keyrings/cloud.google.gpg
-echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" | sudo tee -a /etc/apt/sources.list.d/google-cloud-sdk.list
-sudo apt-get update && sudo apt-get install google-cloud-sdk
-```
+1. **Set Active Project & Enable Required APIs**:
+   ```bash
+   gcloud config set project <PROJECT_ID>
+   gcloud services enable drive.googleapis.com iamcredentials.googleapis.com --project="<PROJECT_ID>"
+   ```
 
-### B. Google Cloud IAM Setup
-1.  **Service Account**: Create a Service Account (e.g., `mcp-drive-sa@project.iam.gserviceaccount.com`).
-2.  **Zero Key Policy**: Do **NOT** create a Private Key JSON file.
-3.  **Permissions**: Grant your developer account the `Service Account Token Creator` role on the Service Account.
-    -   **Via Console**: Go to IAM > Service Accounts > [Your SA] > Permissions > Grant Access > Add your email with `roles/iam.serviceAccountTokenCreator`.
-    -   **Via CLI**: 
-        ```bash
-        gcloud iam service-accounts add-iam-policy-binding <SERVICE_ACCOUNT_EMAIL> \
-            --member="user:<YOUR_EMAIL>" \
-            --role="roles/iam.serviceAccountTokenCreator"
-        ```
-4.  **API Enablement**: Ensure the **Google Drive API** and **IAM Service Account Credentials API** are enabled in your GCP project.
-    ```bash
-    gcloud services enable drive.googleapis.com iamcredentials.googleapis.com
-    ```
+2. **Create a Service Account** (e.g. `mcp-drive-sa@<PROJECT_ID>.iam.gserviceaccount.com`). *Do NOT create or download a JSON key!*
 
-### C. Google Drive Setup
-1. **Share Folder**: Share your target Google Drive folder with the Service Account email as an **Editor**.
-2. **Folder ID**: Copy the Folder ID from the URL (e.g., `180Y5FAzId...`).
+3. **Grant Impersonation Permission to Your Account**:
+   Grant your user account the `Service Account Token Creator` role on the Service Account:
+   ```bash
+   gcloud iam service-accounts add-iam-policy-binding <SERVICE_ACCOUNT_EMAIL> \
+       --member="user:<YOUR_WORKSPACE_EMAIL>" \
+       --role="roles/iam.serviceAccountTokenCreator" \
+       --project="<PROJECT_ID>"
+   ```
 
 ---
 
-## 3. Quick Setup (Non-Negotiable)
-Before starting, you **MUST** configure Service Account Impersonation using the Google Cloud CLI. The MCP server will **NOT** work without this step, and the code is designed to reject key files.
+### Step 2: Share Google Drive Folder
 
-```bash
-gcloud auth application-default login --impersonate-service-account="<SERVICE_ACCOUNT_EMAIL>"
-```
-
----
-
-## 4. Configuration (.env)
-Create a `.env.googledrive` file to store your folder ID. **DO NOT** store key paths here.
-
-```bash
-# .env.googledrive
-GOOGLE_DRIVE_ROOT_FOLDER_ID="your_google_drive_folder_id"
-```
+1. Open Google Drive (Google Workspace Shared Drive recommended).
+2. Share target folders or Shared Drives with your Service Account email (e.g. `mcp-drive-sa@...`) as **Content Manager** or **Editor**.
+3. **No extra MCP config required!** The server dynamically accesses whatever folders you share with it.
 
 ---
 
-## 5. Installation & Setup by Agent
+### Step 3: Authenticate & Run
 
-### A. Gemini CLI
-1. Open or create `.gemini/config.json`.
-2. Add the configuration (Note: no `GOOGLE_APPLICATION_CREDENTIALS` line for local dev):
+1. **Authenticate gcloud CLI**:
+   ```bash
+   gcloud auth login
+   ```
 
+2. **Login Application Default Credentials (ADC) with Impersonation**:
+   ```bash
+   gcloud auth application-default login --impersonate-service-account="<SERVICE_ACCOUNT_EMAIL>"
+   ```
+
+3. **Verify Setup**:
+   ```bash
+   ./scripts/verify-setup.sh
+   ```
+
+---
+
+## 🛠️ Available MCP Tools
+
+| Tool Name | Parameters | Description |
+| :--- | :--- | :--- |
+| **`drive_list_files`** | `pageSize` (optional, max 100)<br>`query` (optional string) | List files and folders in Google Drive accessible to the Service Account. |
+| **`drive_upload_text_file`** | `name` (required)<br>`content` (required)<br>`parentId` (optional) | Upload a text file to Google Drive. *(Note: Requires Google Workspace Shared Drive for storage quota)*. |
+| **`drive_create_folder`** | `name` (required)<br>`parentId` (optional) | Create a new folder in Google Drive. |
+| **`drive_download_file`** | `fileId` (required)<br>`destPath` (required) | Download a binary or regular file to the local file system (automatically creates missing local destination folders). |
+
+---
+
+## ⚙️ AI Agent Configurations
+
+No environment variables are required in the agent configuration (`env` is empty).
+
+### Gemini CLI (`.gemini/config.json`)
 ```json
 {
   "mcpServers": {
     "googledrive": {
       "command": "npx",
-      "args": ["-y", "mcp-google-drive"],
-      "env": {
-        "GOOGLE_DRIVE_ROOT_FOLDER_ID": "${GOOGLE_DRIVE_ROOT_FOLDER_ID}"
-      }
+      "args": ["-y", "@hydrochlorix/googledrive-mcp-server"]
+    }
+  }
+}
+```
+
+### Hermes Agent (`~/.hermes/config.yaml`)
+```yaml
+mcp_servers:
+  googledrive:
+    command: "npx"
+    args: ["-y", "@hydrochlorix/googledrive-mcp-server"]
+```
+
+### Claude Desktop / Cursor (`claude_desktop_config.json`)
+```json
+{
+  "mcpServers": {
+    "googledrive": {
+      "command": "npx",
+      "args": ["-y", "@hydrochlorix/googledrive-mcp-server"]
     }
   }
 }
@@ -95,45 +120,36 @@ GOOGLE_DRIVE_ROOT_FOLDER_ID="your_google_drive_folder_id"
 
 ---
 
-### B. Hermes Agent
-Add to `~/.hermes/config.yaml`:
+## ❓ Troubleshooting & Limitations
 
-```yaml
-mcp_servers:
-  googledrive:
-    command: "npx"
-    args: ["-y", "mcp-google-drive"]
-    env:
-      GOOGLE_DRIVE_ROOT_FOLDER_ID: "${GOOGLE_DRIVE_ROOT_FOLDER_ID}"
-```
+### 1. `PERMISSION_DENIED` / `iam.serviceAccounts.getAccessToken` Errors
+If you encounter permission denied errors during impersonation:
+1. Ensure `gcloud auth login` was run with your workspace email.
+2. Ensure you executed the IAM policy binding command in Step 1:
+   ```bash
+   gcloud iam service-accounts add-iam-policy-binding <SERVICE_ACCOUNT_EMAIL> \
+       --member="user:<YOUR_WORKSPACE_EMAIL>" \
+       --role="roles/iam.serviceAccountTokenCreator" \
+       --project="<PROJECT_ID>"
+   ```
+3. Re-run `gcloud auth application-default login --impersonate-service-account="<SERVICE_ACCOUNT_EMAIL>"`.
 
----
-
-## 6. Available Tools
-- `search_files`: Search limited to the Root Folder.
-- `list_files`: List files in the Root Folder.
-- `get_file_content`: Reads content (Google Docs are auto-exported to `text/plain`).
-- `create_file`: Create files/folders.
-- `update_file`: Update file content.
-
----
-
-## 7. Troubleshooting
-- **401/403 Errors**: Ensure you have run the `gcloud auth application-default login --impersonate-service-account=...` command.
-- **Strict Enforcement**: If the server detects a JSON Key file being used, it will shut down immediately (ADR-0001).
-- **Isolation**: Search results are restricted via query injection (ADR-0002).
+### 2. Service Account Storage Quota on Personal (`@gmail.com`) Drives
+- **Service Accounts have 0 Bytes personal storage quota**.
+- **Supported on `@gmail.com`**: `drive_list_files`, `drive_download_file`, and `drive_create_folder` (folders consume 0 Bytes quota).
+- **Upload Limitation**: `drive_upload_text_file` to a personal `@gmail.com` folder will fail with `Service Accounts do not have storage quota` because file ownership defaults to the Service Account.
+- **Recommended Solution**: Use a **Google Workspace Shared Drive** (where storage quota belongs to the Shared Drive) for seamless 100% upload support.
 
 ---
 
-## 8. Verification
-To ensure your MCP server is working correctly, you can perform a simple "smoke test":
+## 🧪 Verification & Smoke Test
 
-1. Start your AI agent (Gemini, Hermes, etc.) with this MCP server configured.
-2. Ask the agent: **"List the most recent file in my Google Drive."**
-3. **Success**: The agent should return the name of a file from your shared folder.
-4. **Troubleshooting**: If it fails, check your `.env.googledrive` paths and Service Account permissions.
+To verify your setup:
+1. Start your AI agent with this MCP server configured.
+2. Prompt the agent: **"List the most recent files in my Google Drive."**
+3. **Success**: The agent returns the list of files from your shared Drive folder.
 
 ---
 
-## 9. License
+## 📜 License
 This project is licensed under the [MIT License](LICENSE).

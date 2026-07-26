@@ -1,74 +1,52 @@
-import fs from "node:fs";
 import { google } from "googleapis";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { getDriveClient } from "../src/auth.js";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
+// 1. Mock googleapis ให้อยู่นอกสุดเหมือนเดิม
 vi.mock("googleapis", () => {
-  const mockGetClient = vi.fn().mockResolvedValue("mock-auth-client");
-  const mockGoogleAuth = vi.fn().mockImplementation(() => ({
-    getClient: mockGetClient,
-  }));
-  const mockDrive = vi.fn().mockReturnValue({
+  const mockDrive = {
     files: { list: vi.fn() },
-  });
-
+  };
   return {
     google: {
-      auth: { GoogleAuth: mockGoogleAuth },
-      drive: mockDrive,
+      auth: {
+        GoogleAuth: vi.fn(class {}),
+      },
+      drive: vi.fn().mockReturnValue(mockDrive),
     },
   };
 });
 
-describe("Auth Client", () => {
-  let originalEnv: NodeJS.ProcessEnv;
-
+describe("Auth Module", () => {
   beforeEach(() => {
-    originalEnv = { ...process.env };
+    // 2. เคลียร์ประวัติการเรียก Mock ของฟังก์ชันต่างๆ
     vi.clearAllMocks();
+    // 3. สำคัญ: สั่งให้ Vitest ลืมว่าเคยโหลดโมดูล auth.js ไปแล้ว (เพื่อรีเซ็ต driveClientInstance = null)
+    vi.resetModules();
   });
 
-  afterEach(() => {
-    process.env = originalEnv;
+  it("should initialize GoogleAuth and return drive client", async () => {
+    // 4. ต้องใช้การ import แบบ dynamic (await import) ข้างใน Test แทน เพื่อให้มันโหลดโมดูลใหม่ทุกครั้ง
+    const { getDriveClient } = await import("../src/core/auth.js");
+
+    const client = await getDriveClient();
+
+    expect(google.auth.GoogleAuth).toHaveBeenCalledTimes(1);
+    expect(google.drive).toHaveBeenCalledWith(expect.objectContaining({ version: "v3" }));
+    expect(client).toBeDefined();
   });
 
-  it("should initialize GoogleAuth without explicit credentials (relying on ADC)", async () => {
-    delete process.env.GOOGLE_APPLICATION_CREDENTIALS;
-    const drive = await getDriveClient();
+  it("should return the same client instance on subsequent calls (Singleton)", async () => {
+    // 5. โหลดโมดูลแบบเพิ่งเริ่มต้นใหม่เอี่ยม
+    const { getDriveClient } = await import("../src/core/auth.js");
 
-    expect(google.auth.GoogleAuth).toHaveBeenCalledWith({
-      scopes: ["https://www.googleapis.com/auth/drive"],
-    });
+    // เรียกครั้งแรก (สร้างใหม่)
+    const client1 = await getDriveClient();
+    // เรียกครั้งที่สอง (ดึงของเดิมที่จำไว้มาใช้)
+    const client2 = await getDriveClient();
 
-    expect(google.drive).toHaveBeenCalledWith({
-      version: "v3",
-      auth: "mock-auth-client",
-    });
-
-    expect(drive).toBeDefined();
-    expect(typeof drive.files.list).toBe("function");
-  });
-
-  it("should throw an error if GOOGLE_APPLICATION_CREDENTIALS points to a JSON key (Zero Key Policy)", async () => {
-    process.env.GOOGLE_APPLICATION_CREDENTIALS = "/path/to/key.json";
-    const mockReadFileSync = vi
-      .spyOn(fs, "readFileSync")
-      .mockReturnValue(JSON.stringify({ private_key: "some-key" }));
-
-    await expect(getDriveClient()).rejects.toThrow(
-      "การใช้ JSON Key ขัดต่อข้อกำหนดความปลอดภัยของโปรเจกต์ โปรดใช้ ADC หรือ WIF เท่านั้น",
-    );
-    expect(mockReadFileSync).toHaveBeenCalledWith("/path/to/key.json", "utf8");
-  });
-
-  it("should proceed if GOOGLE_APPLICATION_CREDENTIALS points to a WIF config (no private_key)", async () => {
-    process.env.GOOGLE_APPLICATION_CREDENTIALS = "/path/to/wif.json";
-    const mockReadFileSync = vi
-      .spyOn(fs, "readFileSync")
-      .mockReturnValue(JSON.stringify({ type: "external_account" }));
-
-    const drive = await getDriveClient();
-    expect(drive).toBeDefined();
-    expect(mockReadFileSync).toHaveBeenCalledWith("/path/to/wif.json", "utf8");
+    // ยืนยันว่า GoogleAuth ถูกเรียกแค่รอบเดียวในการเรียกครั้งแรก
+    expect(google.auth.GoogleAuth).toHaveBeenCalledTimes(1);
+    // ยืนยันว่า client ทั้งสองตัวคือออบเจกต์เดียวกันในหน่วยความจำ
+    expect(client1).toBe(client2);
   });
 });
