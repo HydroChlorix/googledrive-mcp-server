@@ -92,7 +92,7 @@ No environment variables are required in the agent configuration (`env` is empty
   "mcpServers": {
     "googledrive": {
       "command": "npx",
-      "args": ["-y", "mcp-google-drive"]
+      "args": ["-y", "googledrive-mcp-server"]
     }
   }
 }
@@ -103,7 +103,7 @@ No environment variables are required in the agent configuration (`env` is empty
 mcp_servers:
   googledrive:
     command: "npx"
-    args: ["-y", "mcp-google-drive"]
+    args: ["-y", "googledrive-mcp-server"]
 ```
 
 ### Claude Desktop / Cursor (`claude_desktop_config.json`)
@@ -112,7 +112,7 @@ mcp_servers:
   "mcpServers": {
     "googledrive": {
       "command": "npx",
-      "args": ["-y", "mcp-google-drive"]
+      "args": ["-y", "googledrive-mcp-server"]
     }
   }
 }

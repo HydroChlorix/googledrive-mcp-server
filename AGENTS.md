@@ -24,7 +24,7 @@ No environment variables are required. Leave all auth-related and folder environ
 ```json
 {
   "command": "npx",
-  "args": ["-y", "mcp-google-drive"]
+  "args": ["-y", "googledrive-mcp-server"]
 }
 ```
 
