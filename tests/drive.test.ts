@@ -12,6 +12,8 @@ vi.mock("../src/core/auth.js", () => ({
 // 2. Mock 모ดูล Node.js สำหรับจัดการไฟล์และ Stream
 vi.mock("node:fs", () => ({
   createWriteStream: vi.fn(),
+  existsSync: vi.fn(),
+  mkdirSync: vi.fn(),
 }));
 
 vi.mock("node:stream/promises", () => ({
@@ -82,7 +84,7 @@ describe("Google Drive Core Module", () => {
           },
           media: {
             mimeType: "text/plain",
-            body: "Hello World",
+            body: expect.anything(),
           },
         }),
       );
@@ -138,6 +140,7 @@ describe("Google Drive Core Module", () => {
       // จำลอง WriteStream ของระบบไฟล์ Local
       const mockWriteStream = { write: vi.fn(), end: vi.fn() };
       vi.mocked(fs.createWriteStream).mockReturnValue(mockWriteStream as unknown as fs.WriteStream);
+      vi.mocked(fs.existsSync).mockReturnValue(false);
 
       // จำลองว่า pipeline ทำงานเสร็จสมบูรณ์แบบไม่ติดขัด
       vi.mocked(pipeline).mockResolvedValue(undefined);
@@ -145,9 +148,13 @@ describe("Google Drive Core Module", () => {
       const destPath = "./downloads/test-image.jpg";
       const result = await downloadFile("target-file-id", destPath);
 
+      // ตรวจสอบว่าเช็คและสร้างโฟลเดอร์ปลายทาง
+      expect(fs.existsSync).toHaveBeenCalledWith("./downloads");
+      expect(fs.mkdirSync).toHaveBeenCalledWith("./downloads", { recursive: true });
+
       // ตรวจสอบว่าเรียก API โดยระบุ alt: 'media' และ responseType: 'stream'
       expect(mockDriveClient.files.get).toHaveBeenCalledWith(
-        { fileId: "target-file-id", alt: "media" },
+        { fileId: "target-file-id", alt: "media", supportsAllDrives: true },
         { responseType: "stream" },
       );
 

@@ -18,8 +18,6 @@ export async function getDriveClient(): Promise<drive_v3.Drive> {
     // มันจะวิ่งหาไฟล์ Key อัตโนมัติจาก Environment Variable: GOOGLE_APPLICATION_CREDENTIALS
     const auth = new google.auth.GoogleAuth({
       scopes: SCOPES,
-      // 💡 หรือถ้าจะฮาร์ดโค้ดพาธไฟล์ (เช่น ตอนพัฒนา) สามารถปลดคอมเมนต์บรรทัดล่างนี้ได้
-      // keyFile: './credentials.json',
     });
 
     // 3. สร้าง Drive Client

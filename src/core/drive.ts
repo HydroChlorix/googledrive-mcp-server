@@ -1,4 +1,6 @@
 import * as fs from "node:fs";
+import * as path from "node:path";
+import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import type { drive_v3 } from "googleapis";
 import { getDriveClient } from "./auth.js";
@@ -28,6 +30,8 @@ export async function listFiles(options: ListFilesOptions = {}): Promise<DriveFi
       // ใช้เงื่อนไข: ถ้า query มีค่า ให้แตก object { q: query } เข้าไป, ถ้าไม่มีให้ใส่ object ว่าง
       ...(query ? { q: query } : {}),
       fields: "files(id, name, mimeType)",
+      supportsAllDrives: true,
+      includeItemsFromAllDrives: true,
     });
 
     const files = response.data.files;
@@ -43,7 +47,8 @@ export async function listFiles(options: ListFilesOptions = {}): Promise<DriveFi
     }));
   } catch (error) {
     console.error("❌ Error in core.listFiles:", error);
-    throw new Error("Failed to list files from Google Drive");
+    const detail = error instanceof Error ? error.message : String(error);
+    throw new Error(`Failed to list files from Google Drive (${detail})`);
   }
 }
 
@@ -70,7 +75,7 @@ export async function uploadTextFile(
 
   const media = {
     mimeType: "text/plain",
-    body: content,
+    body: Readable.from([content]),
   };
 
   try {
@@ -78,6 +83,7 @@ export async function uploadTextFile(
       requestBody: fileMetadata, // 4. ใช้ requestBody ตามมาตรฐาน API ใหม่
       media: media,
       fields: "id, name, mimeType",
+      supportsAllDrives: true,
     });
 
     const file = response.data;
@@ -89,9 +95,11 @@ export async function uploadTextFile(
     };
   } catch (error) {
     console.error("❌ Error in core.uploadTextFile:", error);
-    throw new Error(`Failed to upload file: ${name}`);
+    const detail = error instanceof Error ? error.message : String(error);
+    throw new Error(`Failed to upload file: ${name} (${detail})`);
   }
 }
+
 /**
  * สร้างโฟลเดอร์ใหม่ใน Google Drive
  */
@@ -111,6 +119,7 @@ export async function createFolder(name: string, parentId?: string): Promise<Dri
     const response = await drive.files.create({
       requestBody: fileMetadata,
       fields: "id, name, mimeType",
+      supportsAllDrives: true,
     });
 
     const file = response.data;
@@ -122,7 +131,8 @@ export async function createFolder(name: string, parentId?: string): Promise<Dri
     };
   } catch (error) {
     console.error("❌ Error in core.createFolder:", error);
-    throw new Error(`Failed to create folder: ${name}`);
+    const detail = error instanceof Error ? error.message : String(error);
+    throw new Error(`Failed to create folder: ${name} (${detail})`);
   }
 }
 
@@ -134,8 +144,16 @@ export async function downloadFile(fileId: string, destPath: string): Promise<st
   const drive = await getDriveClient();
 
   try {
+    const dir = path.dirname(destPath);
+    if (dir && !fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+
     // กำหนด responseType เป็น stream เพื่อไม่ให้กิน Memory หากไฟล์ใหญ่
-    const response = await drive.files.get({ fileId, alt: "media" }, { responseType: "stream" });
+    const response = await drive.files.get(
+      { fileId, alt: "media", supportsAllDrives: true },
+      { responseType: "stream" },
+    );
 
     const dest = fs.createWriteStream(destPath);
 
@@ -145,6 +163,7 @@ export async function downloadFile(fileId: string, destPath: string): Promise<st
     return destPath;
   } catch (error) {
     console.error(`❌ Error in core.downloadFile for ID ${fileId}:`, error);
-    throw new Error(`Failed to download file ID: ${fileId}`);
+    const detail = error instanceof Error ? error.message : String(error);
+    throw new Error(`Failed to download file ID: ${fileId} (${detail})`);
   }
 }
