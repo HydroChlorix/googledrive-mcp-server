@@ -9,6 +9,10 @@
     "googledrive-mcp-server": "dist/server.mjs"
   },
   "files": ["dist", "README.md", "LICENSE"],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/HydroChlorix/googledrive-mcp-server.git"
+  },
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org/"
