@@ -10,7 +10,8 @@
   },
   "files": ["dist", "README.md", "LICENSE"],
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
   },
   "keywords": ["mcp", "mcp-server", "google-drive", "keyless-auth", "adc"],
   "engines": {
