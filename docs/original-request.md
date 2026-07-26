@@ -1,5 +1,8 @@
 # Original User Request
 
+> [!NOTE]
+> **HISTORICAL RECORD**: This document records the original v1.x feature request for `get_file_from_url`. The codebase has since been upgraded to v2.0.0 in TypeScript.
+
 ## Initial Request — 2026-06-12T19:31:17Z
 
 Implement the `get_file_from_url` MCP tool for the Google Drive MCP Server — a new tool that lets AI agents read externally shared Google Drive files by accepting a full Google Drive URL, bypassing Root Folder isolation per ADR-0005.

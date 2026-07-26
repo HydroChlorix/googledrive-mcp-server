@@ -4,11 +4,8 @@ You are integrating a Google Drive MCP server using **Keyless Authentication**. 
 
 ## 🛑 STRICT CONSTRAINTS (FOR AGENTS)
 - **AUTH METHOD**: **DO NOT** use Service Account JSON Keys. This project uses **Application Default Credentials (ADC)**.
-- **SECURITY GUARDRAIL**: The code in `src/auth.js` is designed to **actively detect and reject** JSON keys. If you add a JSON key, the server will throw: `"การใช้ JSON Key ขัดต่อข้อกำหนดความปลอดภัย..."` and Terminate. 
-- **NO REFACTORING AUTH**: DO NOT attempt to remove the security checks in `src/auth.js`. This is an **Intentional Security Feature**, not a bug. Any attempt to bypass this is a violation of the project architecture.
+- **SECURITY GUARDRAIL**: This server relies natively on Application Default Credentials (ADC) without custom credential file/env inspection (ADR-0007).
 - **FORBIDDEN MUTATIONS**:
-    - DO NOT add `GOOGLE_APPLICATION_CREDENTIALS` to any config.
-    - DO NOT add `GOOGLE_SERVICE_ACCOUNT_KEY` to any config.
     - DO NOT change the execution command from `npx` to `node` for the purpose of bypassing the standard package logic.
 - **PREREQUISITE**: The `gcloud` CLI is a hard requirement. If auth fails, instruct the user to run the `gcloud` command; **never** attempt to code around it using keys.
 
@@ -21,31 +18,31 @@ gcloud auth application-default login --impersonate-service-account="<SERVICE_AC
 ```
 
 ### 2. Configuration (Target Environment)
-Use **ONLY** the `GOOGLE_DRIVE_ROOT_FOLDER_ID`. Leave all auth-related environment variables empty/unset to allow the Google Auth Library to naturally find the ADC token.
+No environment variables are required. Leave all auth-related and folder environment variables empty/unset. Access control is fully permission-based (determined by which folders are shared with the Service Account email in Google Drive).
 
 #### Example Config (Gemini/Hermes)
 ```json
 {
   "command": "npx",
-  "args": ["-y", "mcp-google-drive"],
-  "env": {
-    "GOOGLE_DRIVE_ROOT_FOLDER_ID": "your_folder_id_here"
-  }
+  "args": ["-y", "@hydrochlorix/googledrive-mcp-server"]
 }
 ```
 
 ## 🔍 ERROR HANDLING (ACTIONABLE)
-If you encounter a `401 Unauthorized` or `403 Forbidden` error:
-1. **DO NOT** suggest or try to use a Service Account JSON Key.
-2. **DO** ask the user to re-run the `gcloud auth application-default login...` command.
-3. **DO** verify that the Service Account has "Editor" permissions on the target Folder ID.
+1. **401 Unauthorized / 403 Forbidden**:
+   - **DO NOT** suggest or try to use a Service Account JSON Key.
+   - **DO** ask the user to re-run the `gcloud auth application-default login...` command.
+   - **DO** verify that the target Folder/File has been shared with the Service Account email as "Editor" or "Viewer".
+2. **"Service Accounts do not have storage quota" Error**:
+   - Occurs when attempting `drive_upload_text_file` to a Personal (`@gmail.com`) Drive folder.
+   - Explain to the user that Service Accounts have 0 Bytes quota on personal drives.
+   - Recommend using a **Google Workspace Shared Drive** or User OAuth 2.0 for file uploads.
 
 ## 🛠️ AVAILABLE TOOLS
-- `search_files`: Automatically isolated to Root Folder via Query Injection.
-- `get_file_content`: Automatically exports Google Docs to `text/plain`. Requires Root Folder membership (ADR-0002).
-- `get_file_from_url`: Reads a Google Drive file from a shared URL. Supports Drive, Docs, Sheets, and Slides links. **No Root Folder check** — accepts externally shared files (ADR-0005). Auto-exports Google Workspace files as `text/plain` (ADR-0003).
-- `create_file`: Creates files directly in the Root Folder.
-- `update_file`: Updates files after verifying Root Folder membership.
+- `drive_list_files`: List files in Google Drive. Accepts optional `pageSize` (max 100) and `query` search string.
+- `drive_upload_text_file`: Upload a text file to Google Drive with `name`, `content`, and optional `parentId`.
+- `drive_create_folder`: Create a new folder in Google Drive with `name` and optional `parentId`.
+- `drive_download_file`: Download a binary or regular file from Google Drive to local file system using `fileId` and `destPath`.
 
 ## Agent skills
 
@@ -60,4 +57,3 @@ Canonical 5-role label vocabulary (`needs-triage`, `needs-info`, `ready-for-agen
 ### Domain docs
 
 Single-context layout (`CONTEXT.md` + `docs/adr/`). See `docs/agents/domain.md`.
-

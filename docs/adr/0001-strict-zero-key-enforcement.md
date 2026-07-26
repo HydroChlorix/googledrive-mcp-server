@@ -1,7 +1,8 @@
 # ADR 0001: Strict Zero Key Enforcement
 
 ## Status
-Accepted
+Superseded by [ADR 0007](0007-remove-gac-inspection.md)
+
 
 ## Context
 The Google Drive MCP Server project aims to elevate its security posture by permanently deprecating the use of long-lived Service Account JSON Keys (Zero Key Policy). This reduces the risk of credential leakage by transitioning entirely to Keyless Authentication (ADC/WIF).
