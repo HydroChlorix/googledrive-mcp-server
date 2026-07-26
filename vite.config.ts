@@ -8,7 +8,7 @@ export default defineConfig({
       fileName: () => "server.mjs",
     },
     rollupOptions: {
-      external: ["googleapis", "@modelcontextprotocol/sdk", "zod", "dotenv", /^node:/],
+      external: ["googleapis", "@modelcontextprotocol/sdk", "zod", /^node:/],
     },
     target: "node20",
     minify: false,
