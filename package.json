@@ -28,7 +28,7 @@
     "inspector": "npx @modelcontextprotocol/inspector node dist/server.mjs"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.0.0",
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "googleapis": "^173.0.0",
     "zod": "^3.23.8"
   },
