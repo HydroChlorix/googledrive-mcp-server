@@ -8,7 +8,7 @@ import { defaultAuditLogger } from "../utils/auditLogger.js";
 
 export const server: McpServer = new McpServer({
   name: "googledrive-mcp-server",
-  version: "2.0.0",
+  version: "2.1.1",
 });
 
 async function handleToolExecution<T>(
@@ -47,31 +47,39 @@ async function handleToolExecution<T>(
   };
 }
 
-server.tool(
+server.registerTool(
   "drive_list_files",
-  "List files in Google Drive. You can specify pageSize (max 100) and a search query.",
   {
-    pageSize: z
-      .number()
-      .min(1)
-      .max(100)
-      .optional()
-      .describe("Number of files to return (default 10)"),
-    query: z
-      .string()
-      .optional()
-      .describe('Google Drive search query string (e.g. name contains "report")'),
+    description:
+      "List files in Google Drive. You can specify pageSize (max 100) and a search query.",
+    inputSchema: z.object({
+      pageSize: z
+        .number()
+        .min(1)
+        .max(100)
+        .optional()
+        .describe("Number of files to return (default 10)"),
+      query: z
+        .string()
+        .optional()
+        .describe('Google Drive search query string (e.g. name contains "report")'),
+    }),
   },
   async (args) => handleToolExecution("drive_list_files", args, () => listFiles(args)),
 );
 
-server.tool(
+server.registerTool(
   "drive_upload_text_file",
-  "Upload a text file to Google Drive",
   {
-    name: z.string().min(1, "File name is required").describe("Name of the file"),
-    content: z.string().min(1, "File content cannot be empty").describe("Text content of the file"),
-    parentId: z.string().optional().describe("Optional ID of the parent folder"),
+    description: "Upload a text file to Google Drive",
+    inputSchema: z.object({
+      name: z.string().min(1, "File name is required").describe("Name of the file"),
+      content: z
+        .string()
+        .min(1, "File content cannot be empty")
+        .describe("Text content of the file"),
+      parentId: z.string().optional().describe("Optional ID of the parent folder"),
+    }),
   },
   async (args) =>
     handleToolExecution(
@@ -82,12 +90,14 @@ server.tool(
     ),
 );
 
-server.tool(
+server.registerTool(
   "drive_create_folder",
-  "Create a new folder in Google Drive",
   {
-    name: z.string().min(1, "Folder name is required").describe("Name of the new folder"),
-    parentId: z.string().optional().describe("Optional ID of the parent folder"),
+    description: "Create a new folder in Google Drive",
+    inputSchema: z.object({
+      name: z.string().min(1, "Folder name is required").describe("Name of the new folder"),
+      parentId: z.string().optional().describe("Optional ID of the parent folder"),
+    }),
   },
   async (args) =>
     handleToolExecution(
@@ -98,15 +108,18 @@ server.tool(
     ),
 );
 
-server.tool(
+server.registerTool(
   "drive_download_file",
-  "Download a binary or regular file from Google Drive to the local file system (Note: Cannot download Google Docs/Sheets directly).",
   {
-    fileId: z.string().min(1, "File ID is required").describe("ID of the file to download"),
-    destPath: z
-      .string()
-      .min(1, "Destination path (Local) is required")
-      .describe("Local destination path (e.g. ./downloads/image.jpg)"),
+    description:
+      "Download a binary or regular file from Google Drive to the local file system (Note: Cannot download Google Docs/Sheets directly).",
+    inputSchema: z.object({
+      fileId: z.string().min(1, "File ID is required").describe("ID of the file to download"),
+      destPath: z
+        .string()
+        .min(1, "Destination path (Local) is required")
+        .describe("Local destination path (e.g. ./downloads/image.jpg)"),
+    }),
   },
   async (args) =>
     handleToolExecution(
@@ -120,5 +133,5 @@ server.tool(
 export async function startMcpServer(): Promise<void> {
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error("🚀 Google Drive MCP Server v2.0.0 is running on stdio");
+  console.error("🚀 Google Drive MCP Server v2.1.1 is running on stdio");
 }

@@ -1,6 +1,6 @@
 {
   "name": "@hydrochlorix/googledrive-mcp-server",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "description": "Model Context Protocol (MCP) server for Google Drive API",
   "type": "module",
   "main": "dist/server.mjs",
@@ -39,7 +39,7 @@
   "dependencies": {
     "@modelcontextprotocol/server": "^2.0.0",
     "googleapis": "^173.0.0",
-    "zod": "^3.23.8"
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.8.3",

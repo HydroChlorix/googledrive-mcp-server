@@ -3,11 +3,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // 1. Mock SDK ของ MCP Server
 vi.mock("@modelcontextprotocol/server", () => {
-  const mockTool = vi.fn();
+  const mockRegisterTool = vi.fn();
   return {
     McpServer: vi.fn(
       class {
-        tool = mockTool;
+        registerTool = mockRegisterTool;
         connect = vi.fn();
       },
     ),
@@ -34,7 +34,7 @@ describe("MCP Server Initialization", () => {
     expect(McpServer).toHaveBeenCalledWith(
       expect.objectContaining({
         name: "googledrive-mcp-server",
-        version: "2.0.0",
+        version: "2.1.1",
       }),
     );
   });
@@ -44,32 +44,28 @@ describe("MCP Server Initialization", () => {
 
     const serverInstance = vi.mocked(McpServer).mock.results[0].value;
 
-    expect(serverInstance.tool).toHaveBeenCalledTimes(4);
-    expect(serverInstance.tool).toHaveBeenNthCalledWith(
+    expect(serverInstance.registerTool).toHaveBeenCalledTimes(4);
+    expect(serverInstance.registerTool).toHaveBeenNthCalledWith(
       1,
       "drive_list_files",
-      expect.any(String),
       expect.any(Object),
       expect.any(Function),
     );
-    expect(serverInstance.tool).toHaveBeenNthCalledWith(
+    expect(serverInstance.registerTool).toHaveBeenNthCalledWith(
       2,
       "drive_upload_text_file",
-      expect.any(String),
       expect.any(Object),
       expect.any(Function),
     );
-    expect(serverInstance.tool).toHaveBeenNthCalledWith(
+    expect(serverInstance.registerTool).toHaveBeenNthCalledWith(
       3,
       "drive_create_folder",
-      expect.any(String),
       expect.any(Object),
       expect.any(Function),
     );
-    expect(serverInstance.tool).toHaveBeenNthCalledWith(
+    expect(serverInstance.registerTool).toHaveBeenNthCalledWith(
       4,
       "drive_download_file",
-      expect.any(String),
       expect.any(Object),
       expect.any(Function),
     );
