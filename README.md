@@ -2,6 +2,8 @@
 
 Model Context Protocol (MCP) server providing seamless, secure Google Drive integration for AI agents (Gemini, Hermes, Claude, Cursor) using **Keyless Authentication (Application Default Credentials / ADC)**.
 
+✨ **Fully compatible with MCP Specification v2.0.0 (2026-07-28)** ✨
+
 > [!IMPORTANT]
 > **KEYLESS AUTHENTICATION (ADR-0007)**
 > - **DO NOT** use Service Account Private Key files (`.json`).
@@ -22,6 +24,8 @@ Model Context Protocol (MCP) server providing seamless, secure Google Drive inte
 ---
 
 ## 🚀 Quick Start (3-Step Setup)
+
+> **Prerequisite:** Ensure you have Node.js `>=20.0.0` installed.
 
 ### Step 1: One-Time Google Cloud IAM Setup
 

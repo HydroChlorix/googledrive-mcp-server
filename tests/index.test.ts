@@ -1,9 +1,9 @@
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { StdioServerTransport } from "@modelcontextprotocol/server/stdio";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { main } from "../src/index.js";
 
 // Mock Stdio Transport
-vi.mock("@modelcontextprotocol/sdk/server/stdio.js", () => ({
+vi.mock("@modelcontextprotocol/server/stdio", () => ({
   StdioServerTransport: vi.fn(class {}),
 }));
 
