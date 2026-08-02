@@ -1,8 +1,8 @@
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { McpServer } from "@modelcontextprotocol/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // 1. Mock SDK ของ MCP Server
-vi.mock("@modelcontextprotocol/sdk/server/mcp.js", () => {
+vi.mock("@modelcontextprotocol/server", () => {
   const mockTool = vi.fn();
   return {
     McpServer: vi.fn(
