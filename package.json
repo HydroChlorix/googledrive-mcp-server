@@ -15,7 +15,8 @@
   },
   "publishConfig": {
     "access": "public",
-    "registry": "https://registry.npmjs.org/"
+    "registry": "https://registry.npmjs.org/",
+    "provenance": true
   },
   "keywords": ["mcp", "mcp-server", "google-drive", "keyless-auth", "adc"],
   "engines": {

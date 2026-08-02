@@ -7,7 +7,7 @@ on:
 
 jobs:
   publish:
-    runs-on: [self-hosted, oci, arm64]
+    runs-on: ubuntu-latest
     permissions:
       contents: read
       id-token: write
@@ -20,8 +20,10 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npm test
-      - run: npm install -g npm@latest
       - run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
 
 
 
