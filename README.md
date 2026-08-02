@@ -5,8 +5,8 @@ Model Context Protocol (MCP) server providing seamless, secure Google Drive inte
 > [!IMPORTANT]
 > **KEYLESS AUTHENTICATION (ADR-0007)**
 > - **DO NOT** use Service Account Private Key files (`.json`).
-> - **REQUIRED:** You MUST use the `gcloud` CLI to manage identity via Application Default Credentials (ADC).
-> - The server relies 100% natively on Google Auth Application Default Credentials (ADC).
+> - **REQUIRED:** Authentication uses gcloud Application Default Credentials. Run: `gcloud auth application-default login [--impersonate-service-account=...]`
+> - The server relies 100% natively on Google Auth Application Default Credentials (ADC) and does **not** read `GOOGLE_APPLICATION_CREDENTIALS` directly.
 
 ---
 

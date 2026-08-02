@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+import { realpathSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { server } from "./mcp/server.js";
 
@@ -14,6 +16,16 @@ export async function main(): Promise<void> {
 }
 
 // ตรวจสอบว่าถ้าไฟล์นี้ถูกรันโดยตรง (ไม่ใช่ถูกเรียกผ่าน Unit Test) ค่อยสั่งรัน main()
-if (import.meta.url === `file://${process.argv[1]}`) {
+const isMain =
+  process.argv[1] &&
+  (() => {
+    try {
+      return realpathSync(fileURLToPath(import.meta.url)) === realpathSync(process.argv[1]);
+    } catch {
+      return false;
+    }
+  })();
+
+if (isMain) {
   main();
 }
