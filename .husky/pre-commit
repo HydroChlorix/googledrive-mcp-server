@@ -1,1 +1,2 @@
-npm run lint
+npx @biomejs/biome check --write --no-errors-on-unmatched --files-ignore-unknown=true --staged
+npm run test

@@ -64,9 +64,21 @@ Model Context Protocol (MCP) server providing seamless, secure Google Drive inte
    ```
 
 2. **Login Application Default Credentials (ADC) with Impersonation**:
+   > ⚠️ **CRITICAL:** You MUST use the **Service Account email** (e.g., `...iam.gserviceaccount.com`), NOT your personal/company email!
+   
+   Choose the command based on your environment:
+
+   **Option A: Desktop (Mac/Windows/Linux with a GUI)**
    ```bash
    gcloud auth application-default login --impersonate-service-account="<SERVICE_ACCOUNT_EMAIL>"
    ```
+   *(This will automatically open your web browser to log in)*
+
+   **Option B: Headless (WSL, SSH, or Server without a GUI)**
+   ```bash
+   gcloud auth application-default login --no-browser --impersonate-service-account="<SERVICE_ACCOUNT_EMAIL>"
+   ```
+   *(This will give you a long URL. Copy the URL, open it in any web browser on your personal computer, log in, and then paste the resulting verification code/URL back into the terminal)*
 
 3. **Verify Setup**:
    ```bash
@@ -152,6 +164,14 @@ To verify your setup:
 1. Start your AI agent with this MCP server configured.
 2. Prompt the agent: **"List the most recent files in my Google Drive."**
 3. **Success**: The agent returns the list of files from your shared Drive folder.
+
+---
+
+## 💖 Support
+
+If this project helped you, please consider supporting the development! 
+
+<a href="https://www.buymeacoffee.com/hydrochlorix" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" ></a>
 
 ---
 
