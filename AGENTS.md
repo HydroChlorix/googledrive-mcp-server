@@ -7,6 +7,9 @@ You are integrating a Google Drive MCP server using **Keyless Authentication**. 
 - **SECURITY GUARDRAIL**: This server relies natively on Application Default Credentials (ADC) without custom credential file/env inspection (ADR-0007).
 - **FORBIDDEN MUTATIONS**:
     - DO NOT change the execution command from `npx` to `node` for the purpose of bypassing the standard package logic.
+- **GITHUB ACTIONS VERSIONS**:
+    - ALWAYS use `actions/checkout@v5` (do NOT use v4 or older).
+    - ALWAYS use `actions/setup-node@v5` (do NOT use v4 or older).
 - **PREREQUISITE**: The `gcloud` CLI is a hard requirement. If auth fails, instruct the user to run the `gcloud` command; **never** attempt to code around it using keys.
 
 ## 🛠️ HOW TO CONFIGURE ME
