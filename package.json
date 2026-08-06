@@ -1,6 +1,6 @@
 {
   "name": "@hydrochlorix/googledrive-mcp-server",
-  "version": "2.1.2",
+  "version": "2.2.0",
   "description": "Model Context Protocol (MCP) server for Google Drive API",
   "type": "module",
   "main": "dist/server.mjs",
