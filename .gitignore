@@ -5,6 +5,8 @@
 !tsconfig.json
 !biome.json
 !composer.json
+!.vscode/settings.json
+!.vscode/extensions.json
 
 # Build outputs
 dist/

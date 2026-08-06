@@ -1,6 +1,6 @@
 {
   "name": "@hydrochlorix/googledrive-mcp-server",
-  "version": "2.1.1",
+  "version": "2.1.2",
   "description": "Model Context Protocol (MCP) server for Google Drive API",
   "type": "module",
   "main": "dist/server.mjs",
@@ -28,6 +28,7 @@
     "build": "vite build",
     "start": "node dist/server.mjs",
     "test": "vitest run",
+    "test:smoke": "vitest run tests/integration/mcp-smoke.test.ts",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "lint": "biome check .",
@@ -43,6 +44,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^1.8.3",
+    "@modelcontextprotocol/client": "^2.0.0",
     "@types/node": "^20.14.10",
     "@vitest/coverage-v8": "^4.1.10",
     "husky": "^9.0.11",

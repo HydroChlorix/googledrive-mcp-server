@@ -12,9 +12,20 @@ fi
 
 # 2. Check ADC / Impersonation
 echo "🔍 Checking Application Default Credentials..."
-if ! gcloud auth application-default print-access-token &> /dev/null; then
-    echo "❌ Error: Application Default Credentials (ADC) are not configured."
-    echo "Please run: gcloud auth application-default login --impersonate-service-account=\"YOUR_SA_EMAIL\""
+ADC_ERROR=$(gcloud auth application-default print-access-token 2>&1 >/dev/null)
+if [ $? -ne 0 ]; then
+    echo "❌ Error: Application Default Credentials (ADC) are not configured correctly."
+    
+    if echo "$ADC_ERROR" | grep -q -i "Gaia id not found"; then
+        echo ""
+        echo "🚨 ERROR: You used a personal/company email instead of a Service Account!"
+        echo "   The --impersonate-service-account flag requires a Google Cloud Service Account."
+        echo "   (It usually ends with @<project-id>.iam.gserviceaccount.com)"
+        echo "   DO NOT use your personal @gmail.com or @company.com address!"
+    fi
+
+    echo ""
+    echo "Please run: gcloud auth application-default login --impersonate-service-account=\"YOUR_SERVICE_ACCOUNT_EMAIL\""
     exit 1
 fi
 
