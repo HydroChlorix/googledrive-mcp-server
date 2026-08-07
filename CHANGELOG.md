@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.3.3] - 2026-08-07
+
+### Bug Fixes
+- **ci**: Add `npm install -g npm@latest` step before publish to fix scoped package provenance publishing bug in npm 10.x.
+
 ## [2.3.2] - 2026-08-07
 
 ### Bug Fixes
