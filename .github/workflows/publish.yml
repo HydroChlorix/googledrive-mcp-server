@@ -1,19 +1,21 @@
-name: Publish and Sync
+name: Publish & Post-publish Lifecycle
 
 on:
   push:
     branches:
       - main
 
+permissions:
+  contents: write # จำเป็นสำหรับการสร้าง GitHub Release และทำ Back-merge
+  id-token: write # จำเป็นสำหรับการทำ Provenance ของ NPM
+
 jobs:
-  publish:
-    name: Publish to NPM
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      id-token: write
+  # STEP 1A: ตรวจสอบความพร้อมของโค้ด (ทำงานพร้อมกับ Build)
+  verify:
+    name: 1A. Verify
+    runs-on: [self-hosted, oci, arm64]
     steps:
-      - name: Checkout Repo
+      - name: Checkout code
         uses: actions/checkout@v5
         with:
           fetch-depth: 0
@@ -22,13 +24,10 @@ jobs:
         uses: actions/setup-node@v5
         with:
           node-version: '22.x'
-          registry-url: 'https://registry.npmjs.org'
+          cache: 'npm'
 
-      - name: Install Dependencies
+      - name: Install dependencies
         run: npm ci
-
-      - name: Build
-        run: npm run build
 
       - name: Run Tests
         run: npm test
@@ -36,19 +35,116 @@ jobs:
       - name: Run Smoke Tests
         run: npm run test:smoke
 
-      - name: Install latest npm
-        run: npm install -g npm@latest
+  # STEP 1B: สร้างไฟล์สำหรับใช้งาน (ทำงานพร้อมกับ Verify)
+  build:
+    name: 1B. Build
+    runs-on: [self-hosted, oci, arm64]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: '22.x'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Application
+        run: npm run build
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: production-build
+          path: dist/ # โฟลเดอร์ที่ได้จากการ build
+          retention-days: 1 # เก็บไว้แค่ 1 วันเพื่อประหยัดพื้นที่
+
+  # STEP 2: ส่งโค้ดขึ้นระบบปลายทาง (NPM Registry)
+  publish:
+    name: 2. Publish to NPM
+    needs: [verify, build] # รอให้ทั้ง Verify และ Build เสร็จสมบูรณ์
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: '22.x'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Download Build Artifacts
+        uses: actions/download-artifact@v7
+        with:
+          name: production-build
+          path: dist/
 
       - name: Publish to NPM
-        run: npm publish --provenance --access public
+        run: npm publish --provenance --access public --ignore-scripts
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Sync main to develop
+      - name: Notify Discord Webhook (Hermes Agent Trigger)
+        if: success()
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          if [ -n "$DISCORD_WEBHOOK" ]; then
+            curl -H "Content-Type: application/json" \
+                 -X POST \
+                 -d "{\"content\": \"🚀 **[NPM Publish Success]** \`@hydrochlorix/googledrive-mcp-server\` has been successfully published! Hermes Agent, please initiate full tests.\"}" \
+                 $DISCORD_WEBHOOK
+          else
+            echo "DISCORD_WEBHOOK_URL secret is not set, skipping webhook notification."
+          fi
+
+  # STEP 3: สร้าง GitHub Release
+  create-release:
+    name: 3. Create Release
+    needs: publish
+    runs-on: [self-hosted, oci, arm64]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: '22.x'
+
+      - name: Read Version
+        run: echo "VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_ENV
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "v${{ env.VERSION }}" --title "Release v${{ env.VERSION }}" --generate-notes --target main
+
+  # STEP 4: ซิงก์กลับเข้าสายพัฒนาหลัก
+  sync:
+    name: 4. Sync to Develop
+    needs: create-release
+    runs-on: [self-hosted, oci, arm64]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Configure Git
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Merge main into develop (Back-merge)
+        run: |
           git checkout develop
-          git pull origin develop
-          git merge origin/main -m "chore: sync main into develop"
+          git merge origin/main --no-edit
           git push origin develop

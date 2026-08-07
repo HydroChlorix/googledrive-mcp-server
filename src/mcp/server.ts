@@ -78,7 +78,10 @@ server.registerTool(
         .string()
         .min(1, "File content cannot be empty")
         .describe("Text content of the file"),
-      parentId: z.string().optional().describe("Optional ID of the parent folder"),
+      parentId: z
+        .string()
+        .min(1, "Parent Folder ID is strictly required to prevent orphaned files")
+        .describe("ID of the parent folder"),
     }),
   },
   async (args) =>
@@ -96,7 +99,10 @@ server.registerTool(
     description: "Create a new folder in Google Drive",
     inputSchema: z.object({
       name: z.string().min(1, "Folder name is required").describe("Name of the new folder"),
-      parentId: z.string().optional().describe("Optional ID of the parent folder"),
+      parentId: z
+        .string()
+        .min(1, "Parent Folder ID is strictly required to prevent orphaned files")
+        .describe("ID of the parent folder"),
     }),
   },
   async (args) =>

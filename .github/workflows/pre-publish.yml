@@ -1,4 +1,4 @@
-name: PR Version Check
+name: Pre-publish Validation
 
 on:
   pull_request:
@@ -6,12 +6,18 @@ on:
 
 jobs:
   check-version:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, oci, arm64]
     steps:
       - name: Checkout PR
         uses: actions/checkout@v5
         with:
           fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: '22.x'
+          cache: 'npm'
 
       - name: Check version bump
         run: |

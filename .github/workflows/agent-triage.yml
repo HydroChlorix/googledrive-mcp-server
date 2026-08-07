@@ -1,0 +1,33 @@
+name: Agent Bug Triage
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  triage-agent-bug:
+    # Only run if the issue has the label 'reported-by-agent'
+    if: contains(github.event.issue.labels.*.name, 'reported-by-agent')
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      contents: read
+    steps:
+      - name: Acknowledge Agent Report
+        run: |
+          gh issue comment ${{ github.event.issue.number }} \
+            --body "🤖 **Agent Webhook Received!**
+          
+          Thank you for the report. The CI/CD pipeline has acknowledged this bug.
+          A repair agent will be dispatched to investigate the payload and resolve the issue.
+          
+          _Automated by GitHub Actions_"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Parse Agent Payload (Example)
+        run: |
+          echo "Extracting payload from issue body..."
+          # Here you can use jq and awk to parse the JSON block inside the issue
+          # For example, sending it to an external webhook or triggering another workflow:
+          echo "Issue Title: ${{ github.event.issue.title }}"

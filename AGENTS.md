@@ -7,11 +7,15 @@ You are integrating a Google Drive MCP server using **Keyless Authentication**. 
 - **SECURITY GUARDRAIL**: This server relies natively on Application Default Credentials (ADC) without custom credential file/env inspection (ADR-0007).
 - **FORBIDDEN MUTATIONS**:
     - DO NOT change the execution command from `npx` to `node` for the purpose of bypassing the standard package logic.
+- **GITHUB ACTIONS RUNNERS**:
+    - For NPM Publish jobs ONLY: MUST use `runs-on: ubuntu-latest` (required for NPM provenance).
+    - For ALL other jobs (build, verify, test, release, sync, etc.): MUST use `runs-on: [self-hosted, oci, arm64]` by default. DO NOT use `ubuntu-latest` unless strictly necessary.
 - **GITHUB ACTIONS VERSIONS**:
     - ALWAYS use `actions/checkout@v5` (do NOT use v4 or older).
     - ALWAYS use `actions/setup-node@v5` (do NOT use v4 or older).
+    - ALWAYS use `actions/upload-artifact@v7` and `actions/download-artifact@v7` (do NOT use v4 or older).
 - **PREREQUISITE**: The `gcloud` CLI is a hard requirement. If auth fails, instruct the user to run the `gcloud` command; **never** attempt to code around it using keys.
-- **GITHUB ACTIONS**: ALWAYS use `actions/checkout@v5` and `actions/setup-node@v5` when writing or modifying workflows. Do not use `v4` or older versions.
+- **GITHUB ACTIONS**: ALWAYS use `actions/checkout@v5`, `actions/setup-node@v5`, and `actions/upload-artifact@v7` when writing or modifying workflows. Do not use older versions.
 
 ## 🛠️ HOW TO CONFIGURE ME
 
@@ -23,6 +27,11 @@ gcloud auth application-default login --impersonate-service-account="<SERVICE_AC
 
 ### 2. Configuration (Target Environment)
 No environment variables are required. Leave all auth-related and folder environment variables empty/unset. Access control is fully permission-based (determined by which folders are shared with the Service Account email in Google Drive).
+
+### 3. Agent Verification Steps (Pre-flight checks)
+Before running full tests, workflows, or interacting with the environment, agents (e.g. Hermes) MUST independently verify authentication by executing:
+- **GitHub Auth Verification:** Run `gh auth status` in the terminal. If it fails, halt and prompt the user to run `gh auth login`.
+- **Google Cloud ADC Verification:** Run `bash scripts/verify-setup.sh`. (If the repository is not yet cloned and the script is missing, fallback to running `gcloud auth application-default print-access-token` directly). This handles the ADC token check and provides exact instructions if it fails.
 
 #### Example Config (Gemini/Hermes)
 ```json

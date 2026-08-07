@@ -1,4 +1,5 @@
 import * as fs from "node:fs";
+import * as path from "node:path";
 import { pipeline } from "node:stream/promises";
 import type { drive_v3 } from "googleapis";
 import { describe, expect, it, vi } from "vitest";
@@ -82,12 +83,14 @@ describe("Drive Client Dependency Injection Seam", () => {
     vi.mocked(fs.existsSync).mockReturnValue(true);
     vi.mocked(pipeline).mockResolvedValue(undefined);
 
-    const result = await downloadFile("injected-file", "./img.jpg", customDriveMock);
+    const destPath = "./img.jpg";
+    const expectedDest = path.resolve(process.cwd(), destPath);
+    const result = await downloadFile("injected-file", destPath, customDriveMock);
 
     expect(customDriveMock.files.get).toHaveBeenCalledWith(
       { fileId: "injected-file", alt: "media", supportsAllDrives: true },
       { responseType: "stream" },
     );
-    expect(result).toBe("./img.jpg");
+    expect(result).toBe(expectedDest);
   });
 });
