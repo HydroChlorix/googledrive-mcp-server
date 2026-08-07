@@ -30,3 +30,6 @@ Thumbs.db
 .agents/
 memory/
 
+# Temporary files
+tmp/
+

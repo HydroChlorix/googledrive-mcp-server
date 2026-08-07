@@ -82,8 +82,9 @@ Model Context Protocol (MCP) server providing seamless, secure Google Drive inte
 
 3. **Verify Setup**:
    ```bash
-   ./scripts/verify-setup.sh
+   gcloud auth application-default print-access-token
    ```
+   *(If this prints a token without errors, your Keyless Auth is successfully configured!)*
 
 ---
 
@@ -99,6 +100,10 @@ Model Context Protocol (MCP) server providing seamless, secure Google Drive inte
 ---
 
 ## ⚙️ AI Agent Configurations
+
+> **🤖 FOR AI AGENTS (Client Usage):** If you are an AI agent configuring this server for a user, **DO NOT** ask for or generate `.json` key files. If authentication fails, you must explicitly instruct the human user to run the `gcloud auth application-default login ...` command in their terminal.
+> 
+> **🤖 FOR AI AGENTS (Repository Development):** If you are analyzing or contributing to this repository's source code, you MUST read [`AGENTS.md`](AGENTS.md) for strict CI/CD rules and development guidelines.
 
 No environment variables are required in the agent configuration (`env` is empty).
 

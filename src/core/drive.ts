@@ -61,7 +61,7 @@ export async function listFiles(
 export async function uploadTextFile(
   name: string,
   content: string,
-  parentId?: string,
+  parentId: string,
   client?: drive_v3.Drive,
 ): Promise<DriveFile> {
   const drive = client ?? (await getDriveClient());
@@ -72,10 +72,7 @@ export async function uploadTextFile(
     mimeType: "text/plain",
   };
 
-  // 3. สามารถใช้ Dot notation ได้ปกติ เพราะ Type ถูกต้องแล้ว
-  if (parentId) {
-    fileMetadata.parents = [parentId];
-  }
+  fileMetadata.parents = [parentId];
 
   const media = {
     mimeType: "text/plain",
@@ -108,7 +105,7 @@ export async function uploadTextFile(
  */
 export async function createFolder(
   name: string,
-  parentId?: string,
+  parentId: string,
   client?: drive_v3.Drive,
 ): Promise<DriveFile> {
   const drive = client ?? (await getDriveClient());
@@ -118,9 +115,7 @@ export async function createFolder(
     mimeType: "application/vnd.google-apps.folder", // MimeType เฉพาะสำหรับ Folder
   };
 
-  if (parentId) {
-    fileMetadata.parents = [parentId];
-  }
+  fileMetadata.parents = [parentId];
 
   try {
     const response = await drive.files.create({
@@ -154,7 +149,16 @@ export async function downloadFile(
   const drive = client ?? (await getDriveClient());
 
   try {
-    const dir = path.dirname(destPath);
+    // 🛡️ SECURITY FIX: Path Traversal Prevention
+    // บังคับให้ไฟล์ที่ถูกดาวน์โหลด ต้องอยู่ภายใต้ Current Working Directory ของโปรเซสที่รันอยู่เท่านั้น
+    const resolvedDestPath = path.resolve(process.cwd(), destPath);
+    if (!resolvedDestPath.startsWith(process.cwd())) {
+      throw new Error(
+        `Security Error: Path traversal detected. Destination must be within the current working directory (${process.cwd()}). Access to ${resolvedDestPath} is forbidden.`,
+      );
+    }
+
+    const dir = path.dirname(resolvedDestPath);
     if (dir && !fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
@@ -171,7 +175,7 @@ export async function downloadFile(
       mimeType.startsWith("application/vnd.google-apps.") &&
       mimeType !== "application/vnd.google-apps.folder";
 
-    const dest = fs.createWriteStream(destPath);
+    const dest = fs.createWriteStream(resolvedDestPath);
 
     if (isWorkspaceDoc) {
       // 2. ถ้าเป็น Google Docs/Sheets/Slides ให้ส่งออกเป็น text/plain
@@ -189,7 +193,7 @@ export async function downloadFile(
       await pipeline(getResponse.data, dest);
     }
 
-    return destPath;
+    return resolvedDestPath;
   } catch (error) {
     console.error(`❌ Error in core.downloadFile for ID ${fileId}:`, error);
     throw translateDriveError(error, `core.downloadFile for ID ${fileId}`);

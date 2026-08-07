@@ -1,4 +1,5 @@
 import * as fs from "node:fs";
+import * as path from "node:path";
 import { pipeline } from "node:stream/promises";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getDriveClient } from "../src/core/auth.js";
@@ -144,17 +145,20 @@ describe("Google Drive Core Module", () => {
       vi.mocked(pipeline).mockResolvedValue(undefined);
 
       const destPath = "./downloads/test-image.jpg";
+      const expectedDir = path.resolve(process.cwd(), "./downloads");
+      const expectedDest = path.resolve(process.cwd(), destPath);
+
       const result = await downloadFile("target-file-id", destPath);
 
-      expect(fs.existsSync).toHaveBeenCalledWith("./downloads");
-      expect(fs.mkdirSync).toHaveBeenCalledWith("./downloads", { recursive: true });
+      expect(fs.existsSync).toHaveBeenCalledWith(expectedDir);
+      expect(fs.mkdirSync).toHaveBeenCalledWith(expectedDir, { recursive: true });
 
       expect(mockDriveClient.files.get).toHaveBeenCalledWith(
         { fileId: "target-file-id", alt: "media", supportsAllDrives: true },
         { responseType: "stream" },
       );
 
-      expect(result).toBe(destPath);
+      expect(result).toBe(expectedDest);
     });
 
     it("should export a Google Workspace Document to text/plain (ADR-0003)", async () => {
@@ -178,6 +182,7 @@ describe("Google Drive Core Module", () => {
       vi.mocked(pipeline).mockResolvedValue(undefined);
 
       const destPath = "./downloads/report.txt";
+      const expectedDest = path.resolve(process.cwd(), destPath);
       const result = await downloadFile("doc-file-id", destPath);
 
       expect(mockDriveClient.files.export).toHaveBeenCalledWith(
@@ -185,7 +190,7 @@ describe("Google Drive Core Module", () => {
         { responseType: "stream" },
       );
 
-      expect(result).toBe(destPath);
+      expect(result).toBe(expectedDest);
     });
   });
 });
