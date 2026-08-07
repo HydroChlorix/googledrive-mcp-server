@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.3.2] - 2026-08-07
+
+### Bug Fixes
+- **ci**: Add `npm ci --ignore-scripts` to publish job and update `prepare` script to handle missing husky gracefully during NPM publish.
+
 ## [2.3.1] - 2026-08-07
 
 ### Bug Fixes
