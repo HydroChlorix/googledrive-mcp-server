@@ -53,8 +53,8 @@ Before running full tests, workflows, or interacting with the environment, agent
 
 ## 🛠️ AVAILABLE TOOLS
 - `drive_list_files`: List files in Google Drive. Accepts optional `pageSize` (max 100) and `query` search string.
-- `drive_upload_text_file`: Upload a text file to Google Drive with `name`, `content`, and optional `parentId`.
-- `drive_create_folder`: Create a new folder in Google Drive with `name` and optional `parentId`.
+- `drive_upload_text_file`: Upload a text file to Google Drive with `name`, `content`, and required `parentId`.
+- `drive_create_folder`: Create a new folder in Google Drive with `name` and required `parentId`.
 - `drive_download_file`: Download a binary or regular file from Google Drive to local file system using `fileId` and `destPath`.
 
 ## Agent skills
