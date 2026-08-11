@@ -136,6 +136,20 @@ describe("Operation Logger Module", () => {
       expect(entry.hint).toContain("gcloud auth application-default login");
       expect(entry.message).not.toContain("invalid_grant");
     });
+
+    it("should sanitize insufficient authentication scopes error and attach remediation hint", () => {
+      const scopeErr = new Error("Request had insufficient authentication scopes.");
+      reportCrash(scopeErr);
+
+      const logPath = path.join(tmpHomeDir, ".mcp", "logs", "operation.log");
+      const content = fs.readFileSync(logPath, "utf-8").trim();
+      const entry = JSON.parse(content);
+
+      expect(entry.message).toBe(
+        "Process error: Google Authentication Failed: Request had insufficient authentication scopes.",
+      );
+      expect(entry.hint).toContain("--impersonate-service-account");
+    });
   });
 
   describe("registerCrashReporter()", () => {

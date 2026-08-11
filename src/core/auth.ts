@@ -55,7 +55,7 @@ export async function getDriveClient(): Promise<drive_v3.Drive> {
             authMethod: "adc",
             keyPath,
             fileExists: false,
-            hint: 'Verify file path or run: gcloud auth application-default login --impersonate-service-account="YOUR_SERVICE_ACCOUNT_EMAIL"',
+            hint: 'Verify file path or run: gcloud auth application-default login --impersonate-service-account="<SERVICE_ACCOUNT_EMAIL>" (add --no-browser for headless/WSL)',
           },
         );
       }

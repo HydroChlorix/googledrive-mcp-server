@@ -5,7 +5,7 @@ Keyless authentication via Application Default Credentials (ADC) is strictly enf
 ## 🛡️ Security & Authentication
 
 - **Auth Method**: Use Application Default Credentials (ADC) via `gcloud` CLI as the primary authentication method. For automated server/headless environments where Session Control limits apply or WIF is unavailable, using a Service Account JSON key via `GOOGLE_APPLICATION_CREDENTIALS` is an accepted fallback (ADR-0011).
-- **Auth Failures**: Direct user to run `gcloud auth application-default login --impersonate-service-account="<EMAIL>"` (`--no-browser` for headless/WSL). If on a server experiencing frequent `invalid_rapt` expiration, suggest configuring `GOOGLE_APPLICATION_CREDENTIALS`.
+- **Auth Failures**: Direct user to run `gcloud auth application-default login --impersonate-service-account="<SERVICE_ACCOUNT_EMAIL>"` (add `--no-browser` for headless/WSL). If on a server experiencing frequent `invalid_rapt` expiration, suggest configuring `GOOGLE_APPLICATION_CREDENTIALS`.
 - **Log Sanitization**: Redact sensitive data from all log output (Operation Log and Audit Trail). Sanitize raw OAuth error responses (`invalid_grant`, `invalid_rapt`, tokens) into sanitized summaries and safe remediation hints. Never persist raw JSON credential bodies or access tokens.
 
 ## 🚀 CI/CD & GitHub Actions
@@ -44,7 +44,7 @@ Keyless authentication via Application Default Credentials (ADC) is strictly enf
 
 ## 🔍 Diagnostics & Error Resolution
 
-- **401 Unauthorized / 403 Forbidden**: Ask user to re-run `gcloud auth application-default login`. Verify target file/folder is shared with Service Account email as Editor/Viewer.
+- **`insufficient authentication scopes` / 401 Unauthorized / 403 Forbidden**: Ask user to re-run `gcloud auth application-default login --impersonate-service-account="<SERVICE_ACCOUNT_EMAIL>"` (add `--no-browser` for headless/WSL). Verify target file/folder is shared with Service Account email as Editor/Viewer.
 - **Storage Quota Exceeded (Personal Drive Upload)**: Direct user to use a Google Workspace Shared Drive or User OAuth 2.0.
 
 ## 📚 Context Pointers & Knowledge Base

@@ -87,7 +87,7 @@ All log output sanitizes raw error payloads to prevent accidental credential or 
 
 - Raw OAuth errors (`invalid_grant`, `invalid_rapt`, `unable to impersonate`) are intercepted by `sanitizeAuthError()`.
 - Raw JSON response bodies and tokens are stripped and replaced with clean summaries (`Google Authentication Failed: ADC token expired or re-authentication required (invalid_rapt).`).
-- Actionable, non-sensitive remediation instructions are attached in a `hint` field (`Run 'gcloud auth application-default login --impersonate-service-account="<EMAIL>"'`).
+- Actionable, non-sensitive remediation instructions are attached in a `hint` field (`Run 'gcloud auth application-default login --impersonate-service-account="<SERVICE_ACCOUNT_EMAIL>"'`).
 - Zero external libraries are used for sanitization; pattern matching and string transformation use native TypeScript built-ins.
 
 ## Consequences

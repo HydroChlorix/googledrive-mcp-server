@@ -212,9 +212,9 @@ Logs all MCP tool calls to SQLite (`~/.mcp/audit.db`) with zero performance over
 
 ## ❓ Troubleshooting
 
-- **401/403 Permission Denied**: Re-run `gcloud auth application-default login --impersonate-service-account="..."`.
+- **`insufficient authentication scopes` or 401/403 Permission Denied**: Re-run `gcloud auth application-default login --impersonate-service-account="<SERVICE_ACCOUNT_EMAIL>"` (add `--no-browser` for headless/WSL).
 - **`invalid_rapt` Reauthentication Error / Token Expiration**: Token expiration is typically governed by your Google Workspace Admin's Session Control policies.
-  - **Local/Desktop**: Perform a clean reset using `gcloud auth revoke --all` followed by `gcloud auth application-default login --impersonate-service-account="..."`.
+  - **Local/Desktop**: Perform a clean reset using `gcloud auth revoke --all` followed by `gcloud auth application-default login --impersonate-service-account="<SERVICE_ACCOUNT_EMAIL>"`.
   - **Server/Headless**: If you need 24/7 uptime without manual re-auth, you may use a Service Account JSON Key as a fallback (ADR-0011) by setting `export GOOGLE_APPLICATION_CREDENTIALS="/path/to/key.json"`.
 - **Service Account Storage Quota Error**: Service accounts do not have personal Drive storage quota. Ensure uploads target a Google Workspace **Shared Drive**.
 

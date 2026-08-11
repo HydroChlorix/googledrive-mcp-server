@@ -68,29 +68,43 @@ export function log(level: LogLevel, message: string, meta?: Record<string, unkn
     );
   }
 
-  process.stderr.write(`[${level.toUpperCase()}] ${message}\n`);
+  const hintMsg = typeof meta?.["hint"] === "string" ? `\n  Hint: ${meta["hint"]}` : "";
+  process.stderr.write(`[${level.toUpperCase()}] ${message}${hintMsg}\n`);
 }
+
+const AUTH_HINT =
+  "Run 'gcloud auth application-default login --impersonate-service-account=\"<SERVICE_ACCOUNT_EMAIL>\"' (add --no-browser for headless/WSL).";
+
+const AUTH_ERROR_GROUPS = [
+  {
+    matchers: ["invalid_grant", "invalid_rapt", "unable to impersonate"],
+    cleanMessage:
+      "Google Authentication Failed: ADC token expired or re-authentication required (invalid_rapt).",
+  },
+  {
+    matchers: [
+      "insufficient authentication scopes",
+      "insufficientPermissions",
+      "insufficient_scope",
+    ],
+    cleanMessage: "Google Authentication Failed: Request had insufficient authentication scopes.",
+  },
+  {
+    matchers: ["Unauthenticated", "invalid_token"],
+    cleanMessage: "Google Authentication Failed: Invalid or missing OAuth credentials.",
+  },
+];
 
 function sanitizeAuthError(error: unknown): { cleanMessage: string; hint?: string } | null {
   const rawMessage = error instanceof Error ? error.message : String(error);
 
-  if (
-    rawMessage.includes("invalid_grant") ||
-    rawMessage.includes("invalid_rapt") ||
-    rawMessage.includes("unable to impersonate")
-  ) {
-    return {
-      cleanMessage:
-        "Google Authentication Failed: ADC token expired or re-authentication required (invalid_rapt).",
-      hint: "Run 'gcloud auth application-default login --impersonate-service-account=\"<EMAIL>\"' to refresh credentials.",
-    };
-  }
-
-  if (rawMessage.includes("Unauthenticated") || rawMessage.includes("invalid_token")) {
-    return {
-      cleanMessage: "Google Authentication Failed: Invalid or missing OAuth credentials.",
-      hint: "Run 'gcloud auth application-default login' to refresh credentials.",
-    };
+  for (const group of AUTH_ERROR_GROUPS) {
+    if (group.matchers.some((m) => rawMessage.includes(m))) {
+      return {
+        cleanMessage: group.cleanMessage,
+        hint: AUTH_HINT,
+      };
+    }
   }
 
   return null;
