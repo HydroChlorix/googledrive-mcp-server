@@ -15,9 +15,11 @@ export async function getDriveClient(): Promise<drive_v3.Drive> {
 
   try {
     const keyPath = process.env["GOOGLE_APPLICATION_CREDENTIALS"]?.trim();
+    let authMethod: "service_account_key" | "adc" = "adc";
 
     if (keyPath) {
       if (fs.existsSync(keyPath)) {
+        authMethod = "service_account_key";
         log("info", `Auth: Service Account JSON key file verified at '${keyPath}'.`, {
           authMethod: "service_account_key",
           keyPath,
@@ -26,9 +28,9 @@ export async function getDriveClient(): Promise<drive_v3.Drive> {
       } else {
         log(
           "warn",
-          `Auth: GOOGLE_APPLICATION_CREDENTIALS is set to '${keyPath}', but file does not exist.`,
+          `Auth: GOOGLE_APPLICATION_CREDENTIALS is set to '${keyPath}', but file does not exist. Falling back to ADC.`,
           {
-            authMethod: "adc_fallback",
+            authMethod: "adc",
             keyPath,
             fileExists: false,
             hint: 'Verify file path or run: gcloud auth application-default login --impersonate-service-account="YOUR_SERVICE_ACCOUNT_EMAIL"',
@@ -36,7 +38,7 @@ export async function getDriveClient(): Promise<drive_v3.Drive> {
         );
       }
     } else {
-      log("info", "Auth: Initializing using Application Default Credentials (ADC).", {
+      log("info", "Auth: Initializing using Application Default Credentials (adc).", {
         authMethod: "adc",
       });
     }
@@ -48,7 +50,16 @@ export async function getDriveClient(): Promise<drive_v3.Drive> {
 
     driveClientInstance = google.drive({ version: "v3", auth });
 
-    log("info", "Auth: Google Drive API client initialized successfully.");
+    const activeModeLabel =
+      authMethod === "service_account_key"
+        ? "Service Account Key (service_account_key)"
+        : "Application Default Credentials (adc)";
+
+    log(
+      "info",
+      `Auth: Google Drive API client initialized successfully using ${activeModeLabel}.`,
+      { authMethod },
+    );
 
     return driveClientInstance;
   } catch (error) {

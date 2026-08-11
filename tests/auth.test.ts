@@ -43,7 +43,12 @@ describe("Auth Module", () => {
     expect(client).toBeDefined();
     expect(log).toHaveBeenCalledWith(
       "info",
-      "Auth: Initializing using Application Default Credentials (ADC).",
+      "Auth: Initializing using Application Default Credentials (adc).",
+      { authMethod: "adc" },
+    );
+    expect(log).toHaveBeenCalledWith(
+      "info",
+      "Auth: Google Drive API client initialized successfully using Application Default Credentials (adc).",
       { authMethod: "adc" },
     );
   });
@@ -59,9 +64,9 @@ describe("Auth Module", () => {
 
     expect(log).toHaveBeenCalledWith(
       "warn",
-      "Auth: GOOGLE_APPLICATION_CREDENTIALS is set to '/tmp/non-existent-key.json', but file does not exist.",
+      "Auth: GOOGLE_APPLICATION_CREDENTIALS is set to '/tmp/non-existent-key.json', but file does not exist. Falling back to ADC.",
       expect.objectContaining({
-        authMethod: "adc_fallback",
+        authMethod: "adc",
         fileExists: false,
         keyPath: "/tmp/non-existent-key.json",
       }),
@@ -85,6 +90,11 @@ describe("Auth Module", () => {
         fileExists: true,
         keyPath: "/tmp/existing-key.json",
       }),
+    );
+    expect(log).toHaveBeenCalledWith(
+      "info",
+      "Auth: Google Drive API client initialized successfully using Service Account Key (service_account_key).",
+      { authMethod: "service_account_key" },
     );
   });
 
