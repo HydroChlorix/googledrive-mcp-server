@@ -41,15 +41,18 @@ gh issue comment <issue-number> --body-file <path-to-body>
 When an automated tester agent (e.g., Hermes) encounters a bug, it must create an issue using the `gh` CLI so the CI/CD pipeline can intercept it as a webhook.
 
 **Mandatory Requirements for Automated Bug Reports:**
+
 1. You MUST include the labels `bug` and `reported-by-agent`.
 2. The issue body MUST include a structured JSON codeblock named `agent_payload` at the very end.
 
 **Example Command:**
+
 ```bash
 gh issue create --title "Bug: Upload failed with 403" --body-file payload.md --label "bug,reported-by-agent"
 ```
 
 **Example `payload.md` format:**
+
 ```markdown
 Hermes encountered an authentication error during the upload text file test.
 
@@ -63,5 +66,4 @@ The server responded with a 403 Forbidden.
   "error_code": 403,
   "action_required": "triage"
 }
-```
 ```

@@ -1,4 +1,5 @@
 import { type drive_v3, google } from "googleapis";
+import { log } from "./operationLogger.js";
 
 // 1. Scope definition for Google Drive API
 const SCOPES = ["https://www.googleapis.com/auth/drive"];
@@ -19,11 +20,11 @@ export async function getDriveClient(): Promise<drive_v3.Drive> {
 
     driveClientInstance = google.drive({ version: "v3", auth });
 
-    console.error("✅ Google Drive API client initialized successfully.");
+    log("info", "Auth: Google Drive API client initialized successfully.");
 
     return driveClientInstance;
   } catch (error) {
-    console.error("❌ Failed to initialize Google Drive client:", error);
+    log("error", `Auth failed: ${error instanceof Error ? error.message : String(error)}`);
     throw error;
   }
 }

@@ -12,7 +12,7 @@
     "rootDir": "./src",
     "sourceMap": true,
     "declaration": true,
-    "isolatedDeclarations": true,
+    "isolatedDeclarations": false,
 
     /* 3. Strict Type-Checking (ความปลอดภัยสูงสุด) */
     "strict": true,
@@ -30,8 +30,10 @@
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    "noEmit": false,
+    "noEmitOnError": true
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "tests"]
+  "exclude": ["node_modules", "dist", "tests", "src/audit/frontend"]
 }

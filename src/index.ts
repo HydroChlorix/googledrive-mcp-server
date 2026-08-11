@@ -1,16 +1,36 @@
 #!/usr/bin/env node
-import { realpathSync } from "node:fs";
+import { existsSync, realpathSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { StdioServerTransport } from "@modelcontextprotocol/server/stdio";
-import { server } from "./mcp/server.js";
+import { registerCrashReporter, reportCrash } from "./core/operationLogger.js";
+import { startMcpServer } from "./mcp/server.js";
+
+// Register process-level crash reporter at the earliest point
+registerCrashReporter();
+
+// Auto-load .env when running locally if file exists
+if (existsSync(".env") && typeof process.loadEnvFile === "function") {
+  try {
+    process.loadEnvFile();
+  } catch {
+    // Ignore error if loading fails
+  }
+}
 
 export async function main(): Promise<void> {
+  if (process.argv.includes("--gen-token") || process.argv.includes("gen-token")) {
+    const { randomBytes } = await import("node:crypto");
+    const token = randomBytes(32).toString("hex");
+    console.info("🔑 Generated Secure Dashboard Token:");
+    console.info(token);
+    console.info("\nTo use a persistent token, add this to your environment or mcp_config.json:");
+    console.info(`MCP_DASHBOARD_TOKEN=${token}`);
+    process.exit(0);
+  }
+
   try {
-    const transport = new StdioServerTransport();
-    await server.connect(transport);
-    console.error("🚀 Google Drive MCP Server v2.0.0 is running on stdio");
+    await startMcpServer();
   } catch (error) {
-    console.error("❌ Fatal error: Failed to start MCP Server", error);
+    reportCrash(error);
     process.exit(1);
   }
 }

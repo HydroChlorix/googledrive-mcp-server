@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="referrer" content="no-referrer">
+  <title>MCP Audit Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* CSS_INJECT */
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="title">📊 Google Drive MCP Audit Dashboard</div>
+    <div style="display: flex; gap: 0.5rem; align-items: center;">
+      <div id="modeBadge" class="status-badge" style="background: rgba(56, 189, 248, 0.15); color: var(--accent-blue); border-color: rgba(56, 189, 248, 0.3);">
+        <span class="status-dot" style="background: var(--accent-blue); box-shadow: 0 0 8px var(--accent-blue);"></span> Mode: READ-WRITE
+      </div>
+      <div id="connectionStatus" class="status-badge">
+        <span class="status-dot"></span> Live Connected
+      </div>
+    </div>
+  </div>
+
+  <div class="metrics-grid">
+    <div class="card">
+      <div class="card-title">Total API Calls</div>
+      <div class="card-value" id="metricTotalCalls">0</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Success Rate</div>
+      <div class="card-value" id="metricSuccessRate">100%</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Boundary Denied</div>
+      <div class="card-value" id="metricDenied">0</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Avg Latency</div>
+      <div class="card-value" id="metricAvgLatency">0ms</div>
+    </div>
+  </div>
+
+  <!-- Interactive Filter Controls -->
+  <div class="filter-bar">
+    <div class="filter-group">
+      <label class="filter-label" for="filterTool">Tool Name</label>
+      <select id="filterTool" class="select-input" onchange="onFilterChange()">
+        <option value="">All Tools</option>
+        <option value="drive_list_files">drive_list_files</option>
+        <option value="drive_upload_text_file">drive_upload_text_file</option>
+        <option value="drive_create_folder">drive_create_folder</option>
+        <option value="drive_download_file">drive_download_file</option>
+        <option value="drive_download_file_from_url">drive_download_file_from_url</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label class="filter-label" for="filterStatus">Status</label>
+      <select id="filterStatus" class="select-input" onchange="onFilterChange()">
+        <option value="">All Statuses</option>
+        <option value="SUCCESS">SUCCESS</option>
+        <option value="DENIED">DENIED</option>
+        <option value="ERROR">ERROR</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label class="filter-label" for="filterStartDate">Start Date</label>
+      <input type="date" id="filterStartDate" class="date-input" onchange="onFilterChange()" />
+    </div>
+    <div class="filter-group">
+      <label class="filter-label" for="filterEndDate">End Date</label>
+      <input type="date" id="filterEndDate" class="date-input" onchange="onFilterChange()" />
+    </div>
+    <div class="filter-group">
+      <label class="filter-label" for="filterLimit">Rows Per Page</label>
+      <select id="filterLimit" class="select-input" onchange="onFilterChange()">
+        <option value="10">10</option>
+        <option value="20" selected>20</option>
+        <option value="50">50</option>
+        <option value="100">100</option>
+      </select>
+    </div>
+  </div>
+
+  <div id="validationBanner" class="validation-banner"></div>
+
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th>Timestamp</th>
+          <th>Tool Name</th>
+          <th>Status</th>
+          <th>Latency</th>
+        </tr>
+      </thead>
+      <tbody id="logsTableBody">
+        <tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 2rem;">Loading audit logs...</td></tr>
+      </tbody>
+    </table>
+    <div class="pagination-bar">
+      <div id="pageInfo">Showing 0 entries</div>
+      <div class="page-controls">
+        <button id="prevBtn" class="page-btn" onclick="prevPage()" disabled>&larr; Previous</button>
+        <button id="nextBtn" class="page-btn" onclick="nextPage()" disabled>Next &rarr;</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Token Authentication Modal -->
+  <div id="tokenModal" class="modal-overlay modal-hidden">
+    <div class="modal">
+      <div class="modal-title">🔐 Authentication Required</div>
+      <div class="modal-desc">Please enter your MCP Dashboard access token to view audit logs.</div>
+      <form id="tokenForm">
+        <div class="input-group">
+          <label class="input-label" for="tokenInput">Access Token</label>
+          <input type="password" id="tokenInput" class="text-input" placeholder="Enter secret token..." required autocomplete="off" />
+        </div>
+        <button type="submit" class="btn">Authenticate</button>
+        <button type="button" class="btn btn-secondary" onclick="clearToken()">Clear Saved Token</button>
+      </form>
+      <div id="modalError" class="validation-banner" style="margin-top: 0.8rem; display: none;"></div>
+    </div>
+  </div>
+
+  <script>
+    /* JS_INJECT */
+  </script>
+</body>
+</html>

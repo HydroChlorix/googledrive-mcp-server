@@ -1,143 +1,30 @@
-import { McpServer } from "@modelcontextprotocol/server";
 import { StdioServerTransport } from "@modelcontextprotocol/server/stdio";
-import { z } from "zod";
+import { SqliteAuditLogger } from "../audit/SqliteAuditLogger.js";
+import { startDashboardServer } from "../audit/server.js";
+import { BoundarySafeDriveClient } from "../core/DriveClient.js";
+import { getDriveClient } from "../core/auth.js";
+import { log } from "../core/operationLogger.js";
+import { APP_VERSION } from "../version.js";
+import { McpServerApplication } from "./McpServerApplication.js";
 
-import { createFolder, downloadFile, listFiles, uploadTextFile } from "../core/drive.js";
-
-import { defaultAuditLogger } from "../utils/auditLogger.js";
-
-export const server: McpServer = new McpServer({
-  name: "googledrive-mcp-server",
-  version: "2.1.1",
-});
-
-async function handleToolExecution<T>(
-  toolName: string,
-  args: Record<string, unknown>,
-  actionFn: () => Promise<T>,
-  formatSuccess?: (result: T) => string,
-) {
-  const { result, error } = await defaultAuditLogger.logExecution(toolName, args, actionFn);
-
-  if (error !== undefined) {
-    return {
-      isError: true,
-      content: [
-        {
-          type: "text" as const,
-          text: `❌ Execution Error: ${error instanceof Error ? error.message : String(error)}`,
-        },
-      ],
-    };
-  }
-
-  const text = formatSuccess
-    ? formatSuccess(result as T)
-    : typeof result === "string"
-      ? result
-      : JSON.stringify(result, null, 2);
-
-  return {
-    content: [
-      {
-        type: "text" as const,
-        text,
-      },
-    ],
-  };
-}
-
-server.registerTool(
-  "drive_list_files",
-  {
-    description:
-      "List files in Google Drive. You can specify pageSize (max 100) and a search query.",
-    inputSchema: z.object({
-      pageSize: z
-        .number()
-        .min(1)
-        .max(100)
-        .optional()
-        .describe("Number of files to return (default 10)"),
-      query: z
-        .string()
-        .optional()
-        .describe('Google Drive search query string (e.g. name contains "report")'),
-    }),
-  },
-  async (args) => handleToolExecution("drive_list_files", args, () => listFiles(args)),
-);
-
-server.registerTool(
-  "drive_upload_text_file",
-  {
-    description: "Upload a text file to Google Drive",
-    inputSchema: z.object({
-      name: z.string().min(1, "File name is required").describe("Name of the file"),
-      content: z
-        .string()
-        .min(1, "File content cannot be empty")
-        .describe("Text content of the file"),
-      parentId: z
-        .string()
-        .min(1, "Parent Folder ID is strictly required to prevent orphaned files")
-        .describe("ID of the parent folder"),
-    }),
-  },
-  async (args) =>
-    handleToolExecution(
-      "drive_upload_text_file",
-      args,
-      () => uploadTextFile(args.name, args.content, args.parentId),
-      (file) => `✅ Successfully uploaded file:\n${JSON.stringify(file, null, 2)}`,
-    ),
-);
-
-server.registerTool(
-  "drive_create_folder",
-  {
-    description: "Create a new folder in Google Drive",
-    inputSchema: z.object({
-      name: z.string().min(1, "Folder name is required").describe("Name of the new folder"),
-      parentId: z
-        .string()
-        .min(1, "Parent Folder ID is strictly required to prevent orphaned files")
-        .describe("ID of the parent folder"),
-    }),
-  },
-  async (args) =>
-    handleToolExecution(
-      "drive_create_folder",
-      args,
-      () => createFolder(args.name, args.parentId),
-      (folder) => `✅ Successfully created folder:\n${JSON.stringify(folder, null, 2)}`,
-    ),
-);
-
-server.registerTool(
-  "drive_download_file",
-  {
-    description:
-      "Download a binary or regular file from Google Drive to the local file system (Note: Cannot download Google Docs/Sheets directly).",
-    inputSchema: z.object({
-      fileId: z.string().min(1, "File ID is required").describe("ID of the file to download"),
-      destPath: z
-        .string()
-        .min(1, "Destination path (Local) is required")
-        .describe("Local destination path (e.g. ./downloads/image.jpg)"),
-    }),
-  },
-  async (args) =>
-    handleToolExecution(
-      "drive_download_file",
-      args,
-      () => downloadFile(args.fileId, args.destPath),
-      (savedPath) => `✅ Successfully downloaded file to local path:\n${savedPath}`,
-    ),
-);
+export { McpServerApplication };
 
 export async function startMcpServer(): Promise<void> {
+  const googleDriveClient = await getDriveClient();
+  const safeDriveClient = await BoundarySafeDriveClient.create(googleDriveClient);
+
+  const mode = process.env["GOOGLE_DRIVE_MODE"] === "readonly" ? "read" : "readwrite";
+  const sqliteAuditLogger = new SqliteAuditLogger();
+  startDashboardServer(sqliteAuditLogger, { mode });
+
+  const app = new McpServerApplication(safeDriveClient, sqliteAuditLogger, undefined, undefined, {
+    mode,
+  });
+
   const transport = new StdioServerTransport();
-  await server.connect(transport);
-  console.error("🚀 Google Drive MCP Server v2.1.1 is running on stdio");
+  await app.connect(transport);
+  log("info", `🚀 Google Drive MCP Server v${APP_VERSION} [${mode}] started`);
+  if (mode === "read") {
+    log("warn", "Write tools disabled (GOOGLE_DRIVE_MODE=readonly)");
+  }
 }
