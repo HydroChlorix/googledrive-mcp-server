@@ -12,6 +12,7 @@
 [![Least Privilege Key](https://img.shields.io/badge/Auth-Least_Privilege_Key-4285F4?style=flat-square&logo=googlecloud&logoColor=white)](docs/architecture/authentication.md)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
 [![MCP Spec Version](https://img.shields.io/badge/MCP_Spec-v2.0.0-green?style=flat-square)](https://modelcontextprotocol.io)
+[![Buy Me A Coffee](https://img.shields.io/badge/Buy_Me_A_Coffee-Donate-FFDD00?style=flat-square&logo=buy-me-a-coffee&logoColor=black)](https://www.buymeacoffee.com/hydrochlorix)
 
 An [MCP server](https://modelcontextprotocol.io) providing secure Google Drive access to AI assistants using **Least Privilege Key Authentication**, **Application Default Credentials (ADC)**, and **Service Account Impersonation**.
 
@@ -216,6 +217,14 @@ Logs all MCP tool calls to SQLite (`~/.mcp/audit.db`) with zero performance over
   - **Local/Desktop**: Perform a clean reset using `gcloud auth revoke --all` followed by `gcloud auth application-default login --impersonate-service-account="..."`.
   - **Server/Headless**: If you need 24/7 uptime without manual re-auth, you may use a Service Account JSON Key as a fallback (ADR-0011) by setting `export GOOGLE_APPLICATION_CREDENTIALS="/path/to/key.json"`.
 - **Service Account Storage Quota Error**: Service accounts do not have personal Drive storage quota. Ensure uploads target a Google Workspace **Shared Drive**.
+
+---
+
+## 💖 Support
+
+If this project helped you, please consider supporting its development!
+
+[<img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" width="217" height="60">](https://www.buymeacoffee.com/hydrochlorix)
 
 ---
 
