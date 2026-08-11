@@ -22,6 +22,17 @@ Service Account Impersonation allows an authenticated human or workload identity
 
 Impersonation is the identity flow. ADC is how the application discovers the resulting credentials. WIF is one way an external workload obtains the identity needed for that flow.
 
+## Credential File Types & Detection Matrix
+
+When `GOOGLE_APPLICATION_CREDENTIALS` or default ADC paths are used, the server inspects the JSON `"type"` property at startup for diagnostic logging:
+
+| Credential Type (`authMethod`) | JSON `"type"` Property | Source & Mechanism | Use Case & Behavior |
+| :--- | :--- | :--- | :--- |
+| **`service_account_key`** | `"service_account"` | Service Account Private Key JSON file generated from GCP Console/IAM. | Long-lived fallback for headless servers where ADC Session Control limits apply (**ADR-0011**). |
+| **`impersonated_adc`** | `"impersonated_service_account"` | Created via `gcloud auth application-default login --impersonate-service-account="..."`. | **Recommended for local dev**. Uses developer OAuth to acquire short-lived tokens on behalf of a Service Account. |
+| **`user_adc`** | `"authorized_user"` | Created via standard `gcloud auth application-default login`. | Direct User OAuth 2.0 credentials tied directly to the developer's personal account. |
+| **`adc`** | *N/A (No JSON path set)* | Environment default ADC lookup (GCP Metadata server, standard path, WIF). | Keyless authentication when running inside GCP environments (GKE, Cloud Run, Compute Engine). |
+
 ## Supported deployment flows
 
 ### Local development
