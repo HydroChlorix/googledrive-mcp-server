@@ -8,6 +8,27 @@ const SCOPES = ["https://www.googleapis.com/auth/drive"];
 // Singleton instance for Google Drive Client
 let driveClientInstance: drive_v3.Drive | null = null;
 
+export type CredentialType = "service_account_key" | "impersonated_adc" | "user_adc" | "adc";
+
+export function detectCredentialType(keyPath: string): CredentialType {
+  try {
+    const fileContent = fs.readFileSync(keyPath, "utf-8");
+    const parsed = JSON.parse(fileContent);
+    switch (parsed?.type) {
+      case "service_account":
+        return "service_account_key";
+      case "impersonated_service_account":
+        return "impersonated_adc";
+      case "authorized_user":
+        return "user_adc";
+      default:
+        return "service_account_key";
+    }
+  } catch {
+    return "service_account_key";
+  }
+}
+
 export async function getDriveClient(): Promise<drive_v3.Drive> {
   if (driveClientInstance) {
     return driveClientInstance;
@@ -15,25 +36,11 @@ export async function getDriveClient(): Promise<drive_v3.Drive> {
 
   try {
     const keyPath = process.env["GOOGLE_APPLICATION_CREDENTIALS"]?.trim();
-    let authMethod: "service_account_key" | "impersonated_adc" | "user_adc" | "adc" = "adc";
+    let authMethod: CredentialType = "adc";
 
     if (keyPath) {
       if (fs.existsSync(keyPath)) {
-        try {
-          const fileContent = fs.readFileSync(keyPath, "utf-8");
-          const parsed = JSON.parse(fileContent);
-          if (parsed.type === "service_account") {
-            authMethod = "service_account_key";
-          } else if (parsed.type === "impersonated_service_account") {
-            authMethod = "impersonated_adc";
-          } else if (parsed.type === "authorized_user") {
-            authMethod = "user_adc";
-          } else {
-            authMethod = "service_account_key";
-          }
-        } catch {
-          authMethod = "service_account_key";
-        }
+        authMethod = detectCredentialType(keyPath);
 
         log("info", `Auth: Credentials JSON file verified at '${keyPath}' (type: ${authMethod}).`, {
           authMethod,

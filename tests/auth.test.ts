@@ -127,6 +127,32 @@ describe("Auth Module", () => {
     );
   });
 
+  it("should log info when GOOGLE_APPLICATION_CREDENTIALS file exists (authorized_user)", async () => {
+    process.env["GOOGLE_APPLICATION_CREDENTIALS"] = "/tmp/user_adc.json";
+    vi.spyOn(fs, "existsSync").mockReturnValue(true);
+    vi.spyOn(fs, "readFileSync").mockReturnValue(JSON.stringify({ type: "authorized_user" }));
+
+    const { getDriveClient } = await import("../src/core/auth.js");
+    const { log } = await import("../src/core/operationLogger.js");
+
+    await getDriveClient();
+
+    expect(log).toHaveBeenCalledWith(
+      "info",
+      "Auth: Credentials JSON file verified at '/tmp/user_adc.json' (type: user_adc).",
+      expect.objectContaining({
+        authMethod: "user_adc",
+        fileExists: true,
+        keyPath: "/tmp/user_adc.json",
+      }),
+    );
+    expect(log).toHaveBeenCalledWith(
+      "info",
+      "Auth: Google Drive API client initialized successfully using User ADC (user_adc).",
+      { authMethod: "user_adc" },
+    );
+  });
+
   it("should return the same client instance on subsequent calls (Singleton)", async () => {
     const { getDriveClient } = await import("../src/core/auth.js");
 
