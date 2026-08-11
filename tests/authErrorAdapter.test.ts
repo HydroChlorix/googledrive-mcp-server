@@ -30,6 +30,19 @@ describe("AuthErrorAdapter Deep Module", () => {
     expect(translated.message).toContain("Google Workspace Shared Drive");
   });
 
+  it("should translate revoked credentials (invalid_grant) error to actionable gcloud login instructions", () => {
+    const revokedError = {
+      message: "invalid_grant: Bad Request / Could not refresh access token",
+      status: 400,
+    };
+    const translated = translateDriveError(revokedError, "listFiles");
+
+    expect(translated.message).toContain("Authentication / Permission Error (400)");
+    expect(translated.message).toContain(
+      "gcloud auth application-default login --impersonate-service-account",
+    );
+  });
+
   it("should pass through standard error message for generic errors", () => {
     const genericError = new Error("Network timeout");
     const translated = translateDriveError(genericError, "createFolder");
