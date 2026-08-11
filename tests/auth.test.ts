@@ -73,9 +73,10 @@ describe("Auth Module", () => {
     );
   });
 
-  it("should log info when GOOGLE_APPLICATION_CREDENTIALS file exists", async () => {
+  it("should log info when GOOGLE_APPLICATION_CREDENTIALS file exists (service_account)", async () => {
     process.env["GOOGLE_APPLICATION_CREDENTIALS"] = "/tmp/existing-key.json";
     vi.spyOn(fs, "existsSync").mockReturnValue(true);
+    vi.spyOn(fs, "readFileSync").mockReturnValue(JSON.stringify({ type: "service_account" }));
 
     const { getDriveClient } = await import("../src/core/auth.js");
     const { log } = await import("../src/core/operationLogger.js");
@@ -84,7 +85,7 @@ describe("Auth Module", () => {
 
     expect(log).toHaveBeenCalledWith(
       "info",
-      "Auth: Service Account JSON key file verified at '/tmp/existing-key.json'.",
+      "Auth: Credentials JSON file verified at '/tmp/existing-key.json' (type: service_account_key).",
       expect.objectContaining({
         authMethod: "service_account_key",
         fileExists: true,
@@ -95,6 +96,34 @@ describe("Auth Module", () => {
       "info",
       "Auth: Google Drive API client initialized successfully using Service Account Key (service_account_key).",
       { authMethod: "service_account_key" },
+    );
+  });
+
+  it("should log info when GOOGLE_APPLICATION_CREDENTIALS file exists (impersonated_service_account)", async () => {
+    process.env["GOOGLE_APPLICATION_CREDENTIALS"] = "/tmp/impersonated.json";
+    vi.spyOn(fs, "existsSync").mockReturnValue(true);
+    vi.spyOn(fs, "readFileSync").mockReturnValue(
+      JSON.stringify({ type: "impersonated_service_account" }),
+    );
+
+    const { getDriveClient } = await import("../src/core/auth.js");
+    const { log } = await import("../src/core/operationLogger.js");
+
+    await getDriveClient();
+
+    expect(log).toHaveBeenCalledWith(
+      "info",
+      "Auth: Credentials JSON file verified at '/tmp/impersonated.json' (type: impersonated_adc).",
+      expect.objectContaining({
+        authMethod: "impersonated_adc",
+        fileExists: true,
+        keyPath: "/tmp/impersonated.json",
+      }),
+    );
+    expect(log).toHaveBeenCalledWith(
+      "info",
+      "Auth: Google Drive API client initialized successfully using Impersonated Service Account ADC (impersonated_adc).",
+      { authMethod: "impersonated_adc" },
     );
   });
 

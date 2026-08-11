@@ -15,13 +15,28 @@ export async function getDriveClient(): Promise<drive_v3.Drive> {
 
   try {
     const keyPath = process.env["GOOGLE_APPLICATION_CREDENTIALS"]?.trim();
-    let authMethod: "service_account_key" | "adc" = "adc";
+    let authMethod: "service_account_key" | "impersonated_adc" | "user_adc" | "adc" = "adc";
 
     if (keyPath) {
       if (fs.existsSync(keyPath)) {
-        authMethod = "service_account_key";
-        log("info", `Auth: Service Account JSON key file verified at '${keyPath}'.`, {
-          authMethod: "service_account_key",
+        try {
+          const fileContent = fs.readFileSync(keyPath, "utf-8");
+          const parsed = JSON.parse(fileContent);
+          if (parsed.type === "service_account") {
+            authMethod = "service_account_key";
+          } else if (parsed.type === "impersonated_service_account") {
+            authMethod = "impersonated_adc";
+          } else if (parsed.type === "authorized_user") {
+            authMethod = "user_adc";
+          } else {
+            authMethod = "service_account_key";
+          }
+        } catch {
+          authMethod = "service_account_key";
+        }
+
+        log("info", `Auth: Credentials JSON file verified at '${keyPath}' (type: ${authMethod}).`, {
+          authMethod,
           keyPath,
           fileExists: true,
         });
@@ -53,7 +68,11 @@ export async function getDriveClient(): Promise<drive_v3.Drive> {
     const activeModeLabel =
       authMethod === "service_account_key"
         ? "Service Account Key (service_account_key)"
-        : "Application Default Credentials (adc)";
+        : authMethod === "impersonated_adc"
+          ? "Impersonated Service Account ADC (impersonated_adc)"
+          : authMethod === "user_adc"
+            ? "User ADC (user_adc)"
+            : "Application Default Credentials (adc)";
 
     log(
       "info",
