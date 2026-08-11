@@ -1,7 +1,8 @@
+import fs from "node:fs";
 import { google } from "googleapis";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// 1. Mock googleapis ให้อยู่นอกสุดเหมือนเดิม
+// 1. Mock googleapis
 vi.mock("googleapis", () => {
   const mockDrive = {
     files: { list: vi.fn() },
@@ -16,37 +17,84 @@ vi.mock("googleapis", () => {
   };
 });
 
+// Mock operationLogger to inspect log calls
+vi.mock("../src/core/operationLogger.js", () => ({
+  log: vi.fn(),
+}));
+
 describe("Auth Module", () => {
+  const originalEnv = process.env;
+
   beforeEach(() => {
-    // 2. เคลียร์ประวัติการเรียก Mock ของฟังก์ชันต่างๆ
     vi.clearAllMocks();
-    // 3. สำคัญ: สั่งให้ Vitest ลืมว่าเคยโหลดโมดูล auth.js ไปแล้ว (เพื่อรีเซ็ต driveClientInstance = null)
     vi.resetModules();
+    process.env = { ...originalEnv };
+    delete process.env["GOOGLE_APPLICATION_CREDENTIALS"];
   });
 
-  it("should initialize GoogleAuth and return drive client", async () => {
-    // 4. ต้องใช้การ import แบบ dynamic (await import) ข้างใน Test แทน เพื่อให้มันโหลดโมดูลใหม่ทุกครั้ง
+  it("should initialize GoogleAuth and return drive client using ADC by default", async () => {
     const { getDriveClient } = await import("../src/core/auth.js");
+    const { log } = await import("../src/core/operationLogger.js");
 
     const client = await getDriveClient();
 
     expect(google.auth.GoogleAuth).toHaveBeenCalledTimes(1);
     expect(google.drive).toHaveBeenCalledWith(expect.objectContaining({ version: "v3" }));
     expect(client).toBeDefined();
+    expect(log).toHaveBeenCalledWith(
+      "info",
+      "Auth: Initializing using Application Default Credentials (ADC).",
+      { authMethod: "adc" },
+    );
+  });
+
+  it("should warn when GOOGLE_APPLICATION_CREDENTIALS file does not exist", async () => {
+    process.env["GOOGLE_APPLICATION_CREDENTIALS"] = "/tmp/non-existent-key.json";
+    vi.spyOn(fs, "existsSync").mockReturnValue(false);
+
+    const { getDriveClient } = await import("../src/core/auth.js");
+    const { log } = await import("../src/core/operationLogger.js");
+
+    await getDriveClient();
+
+    expect(log).toHaveBeenCalledWith(
+      "warn",
+      "Auth: GOOGLE_APPLICATION_CREDENTIALS is set to '/tmp/non-existent-key.json', but file does not exist.",
+      expect.objectContaining({
+        authMethod: "adc_fallback",
+        fileExists: false,
+        keyPath: "/tmp/non-existent-key.json",
+      }),
+    );
+  });
+
+  it("should log info when GOOGLE_APPLICATION_CREDENTIALS file exists", async () => {
+    process.env["GOOGLE_APPLICATION_CREDENTIALS"] = "/tmp/existing-key.json";
+    vi.spyOn(fs, "existsSync").mockReturnValue(true);
+
+    const { getDriveClient } = await import("../src/core/auth.js");
+    const { log } = await import("../src/core/operationLogger.js");
+
+    await getDriveClient();
+
+    expect(log).toHaveBeenCalledWith(
+      "info",
+      "Auth: Service Account JSON key file verified at '/tmp/existing-key.json'.",
+      expect.objectContaining({
+        authMethod: "service_account_key",
+        fileExists: true,
+        keyPath: "/tmp/existing-key.json",
+      }),
+    );
   });
 
   it("should return the same client instance on subsequent calls (Singleton)", async () => {
-    // 5. โหลดโมดูลแบบเพิ่งเริ่มต้นใหม่เอี่ยม
     const { getDriveClient } = await import("../src/core/auth.js");
 
-    // เรียกครั้งแรก (สร้างใหม่)
     const client1 = await getDriveClient();
-    // เรียกครั้งที่สอง (ดึงของเดิมที่จำไว้มาใช้)
     const client2 = await getDriveClient();
 
-    // ยืนยันว่า GoogleAuth ถูกเรียกแค่รอบเดียวในการเรียกครั้งแรก
     expect(google.auth.GoogleAuth).toHaveBeenCalledTimes(1);
-    // ยืนยันว่า client ทั้งสองตัวคือออบเจกต์เดียวกันในหน่วยความจำ
     expect(client1).toBe(client2);
   });
 });
