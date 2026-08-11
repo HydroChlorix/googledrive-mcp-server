@@ -6,7 +6,7 @@ This document explains the authentication terms and deployment flows used by the
 
 ### ADC — Application Default Credentials
 
-Application Default Credentials (ADC) is the Google authentication mechanism used by client libraries to discover credentials from the runtime environment. The MCP server delegates credential resolution to the Google Auth SDK and does not inspect or parse credential files itself.
+Application Default Credentials (ADC) is the Google authentication mechanism used by client libraries to discover credentials from the runtime environment. The MCP server delegates credential resolution to the Google Auth SDK, while inspecting the JSON file header at startup solely for precise diagnostic logging (`service_account_key`, `impersonated_adc`, `user_adc`, or `adc`).
 
 ADC is a credential lookup mechanism, not a permission boundary. The resolved identity still needs the required Google Cloud and Google Drive permissions.
 
