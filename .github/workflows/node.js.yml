@@ -28,8 +28,8 @@ jobs:
         node-version: ${{ matrix.node-version }}
         cache: 'npm'
     - run: npm ci
-    - name: Rebuild native dependencies (for older GLIBC compatibility on self-hosted)
-      run: npm run build-release --prefix node_modules/better-sqlite3
+    - name: Rebuild native dependencies (for older GLIBC/GCC compatibility on self-hosted)
+      run: CXXFLAGS="-std=c++2a" npm run build-release --prefix node_modules/better-sqlite3
     - run: npm run build
     - run: npm run lint
     - run: npm test
