@@ -8,6 +8,7 @@ import { createDashboardApp, startDashboardServer } from "../../src/audit/server
 describe("Dashboard Hono Server", () => {
   let tempDbPath: string;
   let logger: SqliteAuditLogger;
+  let tempUiDir: string | undefined;
 
   beforeEach(() => {
     tempDbPath = path.join(
@@ -18,9 +19,19 @@ describe("Dashboard Hono Server", () => {
   });
 
   afterEach(async () => {
-    await logger.close();
-    if (fs.existsSync(tempDbPath)) {
-      fs.unlinkSync(tempDbPath);
+    try {
+      await logger.close();
+    } finally {
+      try {
+        if (fs.existsSync(tempDbPath)) {
+          fs.unlinkSync(tempDbPath);
+        }
+      } finally {
+        if (tempUiDir) {
+          fs.rmSync(tempUiDir, { recursive: true, force: true });
+          tempUiDir = undefined;
+        }
+      }
     }
   });
 
@@ -67,18 +78,16 @@ describe("Dashboard Hono Server", () => {
   });
 
   it("should prevent path traversal attacks when serving static files", async () => {
-    const tempDir = path.join(os.tmpdir(), `test-ui-${Date.now()}`);
-    fs.mkdirSync(tempDir, { recursive: true });
-    fs.writeFileSync(path.join(tempDir, "index.html"), "<h1>Dashboard</h1>");
+    tempUiDir = path.join(os.tmpdir(), `test-ui-${Date.now()}`);
+    fs.mkdirSync(tempUiDir, { recursive: true });
+    fs.writeFileSync(path.join(tempUiDir, "index.html"), "<h1>Dashboard</h1>");
 
-    const app = createDashboardApp(logger, "secret-token", tempDir);
+    const app = createDashboardApp(logger, "secret-token", tempUiDir);
     const res = await app.request("/../../etc/passwd");
     expect(res.status).toBe(200);
     const text = await res.text();
     expect(text).not.toContain("root:x:0:0");
     expect(text).toContain("Dashboard");
-
-    fs.rmSync(tempDir, { recursive: true, force: true });
   });
 
   it("should allow SSE stream connection with valid bearer token or query param", async () => {

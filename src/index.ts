@@ -20,11 +20,18 @@ export async function main(): Promise<void> {
   if (process.argv.includes("--gen-token") || process.argv.includes("gen-token")) {
     const { randomBytes } = await import("node:crypto");
     const token = randomBytes(32).toString("hex");
-    console.info("🔑 Generated Secure Dashboard Token:");
-    console.info(token);
-    console.info("\nTo use a persistent token, add this to your environment or mcp_config.json:");
-    console.info(`MCP_DASHBOARD_TOKEN=${token}`);
-    process.exit(0);
+    const output = [
+      "🔑 Generated Secure Dashboard Token:",
+      token,
+      "",
+      "To use a persistent token, add this to your environment or mcp_config.json:",
+      `MCP_DASHBOARD_TOKEN=${token}`,
+      "",
+    ].join("\n");
+    await new Promise<void>((resolve, reject) => {
+      process.stdout.write(output, (error) => (error ? reject(error) : resolve()));
+    });
+    return;
   }
 
   try {

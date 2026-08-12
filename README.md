@@ -198,6 +198,53 @@ Logs all MCP tool calls to SQLite (`~/.mcp/audit.db`) with zero performance over
   - `MCP_DASHBOARD_TOKEN=<CUSTOM_TOKEN>` — Set authentication token.
 - **Generate Token**: Run `npx -- @hydrochlorix/googledrive-mcp-server --gen-token` (or locally: `npm run build && node dist/server.mjs --gen-token`) to securely generate a 256-bit token.
 
+### Dashboard Setup and Login
+
+1. Generate a token. For an installed or published package:
+
+   ```bash
+   npx -y @hydrochlorix/googledrive-mcp-server --gen-token
+   ```
+
+   For a local checkout:
+
+   ```bash
+   npm run build
+   node dist/server.mjs --gen-token
+   ```
+
+2. Copy the generated `MCP_DASHBOARD_TOKEN` value into the environment of the MCP server. For example:
+
+   ```json
+   {
+     "mcpServers": {
+       "googledrive": {
+         "command": "npx",
+         "args": ["-y", "@hydrochlorix/googledrive-mcp-server"],
+         "env": {
+           "GOOGLE_DRIVE_SHARED_DRIVE_ID": "<SHARED_DRIVE_ID>",
+           "MCP_DASHBOARD_TOKEN": "<GENERATED_TOKEN>"
+         }
+       }
+     }
+   }
+   ```
+
+   Alternatively, set `MCP_DASHBOARD_TOKEN` in `.env` or in the shell that starts the server. Do not commit the token to Git or share it in logs.
+
+3. Restart the MCP server. The dashboard listens on `http://127.0.0.1:3001` by default.
+
+4. Open `http://127.0.0.1:3001` and enter the generated token in the login dialog. The token is stored only in the browser session and is removed when the session is cleared.
+
+5. To call the REST API directly, send the token as a Bearer token:
+
+   ```bash
+   curl -H "Authorization: Bearer <GENERATED_TOKEN>" \
+     http://127.0.0.1:3001/api/audit/logs
+   ```
+
+`MCP_DASHBOARD_TOKEN` protects the audit dashboard only. Google Drive access still requires ADC or the documented Service Account JSON fallback. If the dashboard is disabled with `MCP_DASHBOARD_ENABLED=false`, port 3001 is not opened.
+
 ---
 
 ## 💻 Development & Testing

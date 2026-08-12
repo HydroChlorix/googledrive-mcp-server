@@ -12,10 +12,20 @@ const __dirname = path.dirname(__filename);
 describe.skipIf(!process.env.GOOGLE_DRIVE_SHARED_DRIVE_ID)(
   "Google Drive MCP Server - Integration Smoke Test",
   () => {
-    let client: Client;
-    let transport: StdioClientTransport;
+    let client: Client | undefined;
+    let transport: StdioClientTransport | undefined;
+    let tempOutputDir: string | undefined;
+
+    function getTempOutputDir(): string {
+      if (!tempOutputDir) {
+        throw new Error("Integration smoke test output directory was not initialized");
+      }
+      return tempOutputDir;
+    }
 
     beforeAll(async () => {
+      tempOutputDir = fs.mkdtempSync(path.join(os.tmpdir(), "googledrive-mcp-smoke-"));
+
       // 1. จำลอง Client Transport เชื่อมต่อไปยัง MCP Server ที่ build แล้ว (dist/server.mjs)
       transport = new StdioClientTransport({
         command: "node",
@@ -28,6 +38,7 @@ describe.skipIf(!process.env.GOOGLE_DRIVE_SHARED_DRIVE_ID)(
           ...(process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID
             ? { GOOGLE_DRIVE_ROOT_FOLDER_ID: process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID }
             : {}),
+          MCP_DASHBOARD_PORT: "3001",
         },
       });
 
@@ -37,7 +48,20 @@ describe.skipIf(!process.env.GOOGLE_DRIVE_SHARED_DRIVE_ID)(
     });
 
     afterAll(async () => {
-      await client.close();
+      try {
+        await client?.close();
+      } finally {
+        // Client.close() normally closes the stdio child process. Keep this
+        // fallback for partial setup failures where Client.connect() did not
+        // complete and the transport still owns a child process.
+        if (transport?.pid !== null && transport?.pid !== undefined) {
+          await transport.close();
+        }
+
+        if (tempOutputDir) {
+          fs.rmSync(tempOutputDir, { recursive: true, force: true });
+        }
+      }
     });
 
     // Test 1: drive_list_files (Auth & Schema Check)
@@ -55,7 +79,7 @@ describe.skipIf(!process.env.GOOGLE_DRIVE_SHARED_DRIVE_ID)(
     it("should download a file and create local directories", async () => {
       // ใส่ fileId ที่ใช้ทดสอบใน environment
       const testFileId = process.env.TEST_FILE_ID || "sample-file-id";
-      const destPath = "./tmp/downloads/test-file.txt";
+      const destPath = path.join(getTempOutputDir(), "downloads", "test-file.txt");
 
       const result = await client.callTool({
         name: "drive_download_file",
@@ -95,7 +119,7 @@ describe.skipIf(!process.env.GOOGLE_DRIVE_SHARED_DRIVE_ID)(
       const testUrl =
         process.env.TEST_EXTERNAL_DRIVE_URL ||
         "https://drive.google.com/file/d/nonexistent-smoke-test-id/view";
-      const destPath = "./tmp/downloads/url-download-test.txt";
+      const destPath = path.join(getTempOutputDir(), "downloads", "url-download-test.txt");
 
       const result = await client.callTool({
         name: "drive_download_file_from_url",

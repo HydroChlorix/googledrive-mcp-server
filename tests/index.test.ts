@@ -24,17 +24,15 @@ describe("Main Entry Point (index.ts)", () => {
     expect(startMcpServer).toHaveBeenCalledTimes(1);
   });
 
-  it("should generate token and exit 0 when --gen-token flag is passed", async () => {
+  it("should generate token without truncating piped stdout when --gen-token is passed", async () => {
     const originalArgv = process.argv;
     process.argv = [...originalArgv, "--gen-token"];
     const consoleSpy = vi.spyOn(console, "info").mockImplementation(() => {});
 
     await main();
 
-    expect(consoleSpy).toHaveBeenCalledWith(
-      expect.stringContaining("🔑 Generated Secure Dashboard Token:"),
-    );
-    expect(process.exit).toHaveBeenCalledWith(0);
+    expect(consoleSpy).not.toHaveBeenCalled();
+    expect(process.exit).not.toHaveBeenCalled();
 
     process.argv = originalArgv;
   });
