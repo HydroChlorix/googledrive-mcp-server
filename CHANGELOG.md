@@ -1,6 +1,6 @@
 # Changelog
 
-## [2.4.0] - 2026-08-11
+## [2.4.0] - 2026-08-12
 
 ### ⚠️ Breaking Changes
 
@@ -8,8 +8,17 @@
 
 ### Features
 
+- **core**: implement Operation Logger, Audit Dashboard, and Least Privilege Key Authentication
+- **auth**: verify GOOGLE_APPLICATION_CREDENTIALS key file existence and log status with remediation hint
+- **auth**: specify explicit active authMethod in final initialization log message
+- **auth**: detect precise credential type in JSON file logging
+- **script**: enhance verify-setup.sh with SA key check, boundary validation, and log directory verification
 - **logger**: Added process-level Operation Logger with synchronous NDJSON persistence, `uncaughtException`/`unhandledRejection` crash reporter, and dual-destination output.
 - **security**: Added automated log sanitization and secret redaction. Raw OAuth JSON error strings (`invalid_grant`, `invalid_rapt`, tokens) are stripped and sanitized into human-readable messages with actionable `hint` remediation steps.
+
+### Bug Fixes
+
+- **auth**: update service account email placeholder in authentication hints and error messages
 
 ## [2.3.3] - 2026-08-07
 
