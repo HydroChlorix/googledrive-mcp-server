@@ -29,6 +29,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Rebuild native dependencies (for older GLIBC compatibility on self-hosted)
+        run: npm rebuild better-sqlite3 --build-from-source
+
       - name: Build Application
         run: npm run build
 
@@ -54,6 +57,9 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Rebuild native dependencies (for older GLIBC compatibility on self-hosted)
+        run: npm rebuild better-sqlite3 --build-from-source
 
       - name: Build Application
         run: npm run build
