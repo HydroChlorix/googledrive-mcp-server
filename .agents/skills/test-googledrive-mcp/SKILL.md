@@ -1,12 +1,96 @@
 ---
 name: test-googledrive-mcp
-description: Execute unified verification & testing (Core MCP Drive APIs, Audit Dashboard UI, Operation Logger, REST/SSE APIs, CLI Token Generator, or Full Suite) on local repository or published NPM versions of @hydrochlorix/googledrive-mcp-server.
+description: Execute unified verification and testing for Core MCP Drive APIs, Audit Dashboard UI, Operation Logger, REST/SSE APIs, CLI Token Generator, or the Full Suite on a selected NPM package version or GitHub release/tag of @hydrochlorix/googledrive-mcp-server.
 ---
 
 Goal:
 Execute comprehensive automated verification and health testing on `@hydrochlorix/googledrive-mcp-server`. Supports targeting Core Drive APIs, Audit & Governance Dashboard, Operation Logger & Crash Reporter, or the Full Verification Suite (`npm run test:all`).
 
+## Repositories
+
+Skill repository (the repository that contains this skill):
+https://github.com/HydroChlorix/skills
+
+Skill path:
+`skills/test-googledrive-mcp/SKILL.md`
+
+Skill version:
+Use the `main` branch by default. A branch, tag, or commit specified for the skill repository selects which version of this `SKILL.md` to load or update.
+
+Tested project repository (the project that this skill tests):
+https://github.com/HydroChlorix/googledrive-mcp-server
+
+Tested project version:
+The selected NPM version or GitHub release/tag determines which version of `googledrive-mcp-server` to install, build, and test. This is separate from the skill version.
+
+When the user asks to update this skill, update only the skill repository version:
+
+1. Load `skills/test-googledrive-mcp/SKILL.md` from the skill repository. Use the requested skill branch, tag, or commit; use `main` when none is specified.
+2. Check the tested project repository for current commands, test scopes, and configuration.
+3. Compare the tested project's current behavior with this skill.
+4. Update this skill while preserving its version-selection and verification requirements.
+5. Report both source refs and the changes applied.
+
 Workflow:
+
+0. Data Source and Version Selection (Required Before Testing):
+   - Ask exactly: `Please select the Data Source for testing: [NPM / GitHub]`.
+   - Wait for `NPM` or `Github`. Continue only after receiving a valid selection.
+   - For **NPM**:
+     * Run `npm view @hydrochlorix/googledrive-mcp-server versions --json`.
+     * Show the available published versions and wait for the user to select one or enter a version explicitly. Do not silently choose `latest`.
+     * Verify the exact selection with `npm view @hydrochlorix/googledrive-mcp-server@<version> version`.
+     * Install the exact version with `npm install @hydrochlorix/googledrive-mcp-server@<version>`.
+     * Record the selected package version in the final summary.
+     * Use only the installed package. Skip steps 1 and 2, then continue at step 3.
+   - For **GitHub**:
+     * Verify GitHub CLI authentication with `gh auth status`.
+     * Use tags as the authoritative list of checkoutable versions: `gh api repos/HydroChlorix/googledrive-mcp-server/tags --paginate --jq '.[].name'`.
+     * Use `gh release list --repo HydroChlorix/googledrive-mcp-server --limit 100` as supplemental metadata to identify official releases and prereleases. Do not treat release names as a separate version list.
+     * Prefer SemVer tags such as `v1.2.0` or `v1.2.0-beta.1`; clearly label or exclude non-version tags such as `dev`, `staging`, or `latest`.
+     * Show the available tags and wait for the user to select one or enter a tag explicitly. Preserve any `v` prefix.
+     * Verify the exact selected tag with `gh api repos/HydroChlorix/googledrive-mcp-server/git/ref/tags/<version>`.
+     * Clone into a dedicated temporary workspace with `gh repo clone HydroChlorix/googledrive-mcp-server <temporary-workdir>` and run `git -C <temporary-workdir> checkout <version>`.
+     * Run `npm install` and `npm run build` in the checked-out workspace before starting the server.
+     * Record the selected tag and resolved commit SHA in the final summary.
+     * Ask the user to select the test scope (`all`, `core`, `dashboard`, or `logger`), then continue at step 1.
+   - If any CLI lookup, authentication, version verification, clone, checkout, install, or build fails, report the failure and wait for a corrected selection or environment. Do not start testing.
+
+   MCP server configuration (required before step 3):
+   - Ask the user for `GOOGLE_DRIVE_SHARED_DRIVE_ID`. Accept `GOOGLE_DRIVE_ROOT_FOLDER_ID` as optional; omit that key when no root folder is requested.
+   - For NPM, prepare:
+     ```json
+     {
+       "mcpServers": {
+         "googledrive": {
+           "command": "npx",
+           "args": ["-y", "@hydrochlorix/googledrive-mcp-server@<verified-version>"],
+           "env": {
+             "GOOGLE_DRIVE_SHARED_DRIVE_ID": "<YOUR_SHARED_DRIVE_ID>",
+             "GOOGLE_DRIVE_ROOT_FOLDER_ID": "<OPTIONAL_ROOT_FOLDER_ID>"
+           }
+         }
+       }
+     }
+     ```
+   - For GitHub, prepare:
+     ```json
+     {
+       "mcpServers": {
+         "googledrive": {
+           "command": "node",
+           "args": ["dist/server.mjs"],
+           "cwd": "<CHECKED_OUT_WORKSPACE>",
+           "env": {
+             "GOOGLE_DRIVE_SHARED_DRIVE_ID": "<YOUR_SHARED_DRIVE_ID>",
+             "GOOGLE_DRIVE_ROOT_FOLDER_ID": "<OPTIONAL_ROOT_FOLDER_ID>"
+           }
+         }
+       }
+     }
+     ```
+   - Confirm the selected source/version, required shared-drive ID, optional root-folder ID, launch command, and workspace. Start E2E only after the MCP server starts successfully with this configuration.
+   - If the selected source is GitHub, also confirm the resolved commit SHA before starting E2E testing.
 
 1. Target Scope Selection:
    - Determine target scope from prompt parameters (`all` [default], `core`, `dashboard`, or `logger`):
@@ -41,6 +125,7 @@ Workflow:
    - Real-Time SSE Stream: HTTP 200 OK for `GET /api/audit/stream?token=<TOKEN>`.
 
 6. Final Summary Matrix & Readiness Verdict:
+   - Before the matrix, report the selected source, exact package version or tag, and (for GitHub) resolved commit SHA.
    - Output test results matrix:
 
 | Sub-System / Component | Test Suite / Target Route | Status | Details |
@@ -53,4 +138,4 @@ Workflow:
 | CLI Token Generator | `--gen-token` | PASS / FAIL | 64-char hex token generated |
 | Direct Tool E2E Flow | `drive_*` tools | PASS / FAIL | End-to-end folder/file lifecycle |
 
-- **Release Readiness Verdict**: Clearly state **Ready for Release: READY / NOT READY** with details.
+   - State **Ready for Release: READY** only when every applicable check passes; otherwise state **Ready for Release: NOT READY** and identify each failed or skipped check.
