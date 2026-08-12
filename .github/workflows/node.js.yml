@@ -30,6 +30,7 @@ jobs:
     - run: npm ci
     - name: Rebuild native dependencies (for older GLIBC/GCC compatibility on self-hosted)
       run: |
+        rm -rf node_modules/better-sqlite3/prebuilds
         sed -i 's/c++20/c++2a/g' node_modules/better-sqlite3/binding.gyp
         npm run build-release --prefix node_modules/better-sqlite3
     - run: npm run build
