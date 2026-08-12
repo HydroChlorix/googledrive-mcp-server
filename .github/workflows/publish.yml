@@ -30,7 +30,7 @@ jobs:
         run: npm ci
 
       - name: Rebuild native dependencies (for older GLIBC compatibility on self-hosted)
-        run: npm rebuild better-sqlite3 --build-from-source
+        run: npm run build-release --prefix node_modules/better-sqlite3
 
       - name: Build Application
         run: npm run build
@@ -59,7 +59,7 @@ jobs:
         run: npm ci
 
       - name: Rebuild native dependencies (for older GLIBC compatibility on self-hosted)
-        run: npm rebuild better-sqlite3 --build-from-source
+        run: npm run build-release --prefix node_modules/better-sqlite3
 
       - name: Build Application
         run: npm run build
