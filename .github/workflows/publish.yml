@@ -30,7 +30,9 @@ jobs:
         run: npm ci
 
       - name: Rebuild native dependencies (for older GLIBC/GCC compatibility on self-hosted)
-        run: CXXFLAGS="-std=c++2a" npm run build-release --prefix node_modules/better-sqlite3
+        run: |
+          sed -i 's/c++20/c++2a/g' node_modules/better-sqlite3/binding.gyp
+          npm run build-release --prefix node_modules/better-sqlite3
 
       - name: Build Application
         run: npm run build
@@ -59,7 +61,9 @@ jobs:
         run: npm ci
 
       - name: Rebuild native dependencies (for older GLIBC/GCC compatibility on self-hosted)
-        run: CXXFLAGS="-std=c++2a" npm run build-release --prefix node_modules/better-sqlite3
+        run: |
+          sed -i 's/c++20/c++2a/g' node_modules/better-sqlite3/binding.gyp
+          npm run build-release --prefix node_modules/better-sqlite3
 
       - name: Build Application
         run: npm run build
