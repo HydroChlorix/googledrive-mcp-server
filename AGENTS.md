@@ -1,72 +1,56 @@
-# Instructions for AI Agents (Hermes, Claude, Gemini, etc.)
+# Instructions for AI Agents
 
-You are integrating a Google Drive MCP server using **Keyless Authentication**. This repository enforces a **Strict Zero Key Policy** (ADR-0001).
+Keyless authentication via Application Default Credentials (ADC) is strictly enforced (ADR-0001, ADR-0007).
 
-## 🛑 STRICT CONSTRAINTS (FOR AGENTS)
-- **AUTH METHOD**: **DO NOT** use Service Account JSON Keys. This project uses **Application Default Credentials (ADC)**.
-- **SECURITY GUARDRAIL**: This server relies natively on Application Default Credentials (ADC) without custom credential file/env inspection (ADR-0007).
-- **FORBIDDEN MUTATIONS**:
-    - DO NOT change the execution command from `npx` to `node` for the purpose of bypassing the standard package logic.
-- **GITHUB ACTIONS RUNNERS**:
-    - For NPM Publish jobs ONLY: MUST use `runs-on: ubuntu-latest` (required for NPM provenance).
-    - For ALL other jobs (build, verify, test, release, sync, etc.): MUST use `runs-on: [self-hosted, oci, arm64]` by default. DO NOT use `ubuntu-latest` unless strictly necessary.
-- **GITHUB ACTIONS VERSIONS**:
-    - ALWAYS use `actions/checkout@v5` (do NOT use v4 or older).
-    - ALWAYS use `actions/setup-node@v5` (do NOT use v4 or older).
-    - ALWAYS use `actions/upload-artifact@v7` and `actions/download-artifact@v7` (do NOT use v4 or older).
-- **PREREQUISITE**: The `gcloud` CLI is a hard requirement. If auth fails, instruct the user to run the `gcloud` command; **never** attempt to code around it using keys.
-- **GITHUB ACTIONS**: ALWAYS use `actions/checkout@v5`, `actions/setup-node@v5`, and `actions/upload-artifact@v7` when writing or modifying workflows. Do not use older versions.
+## 🛡️ Security & Authentication
 
-## 🛠️ HOW TO CONFIGURE ME
+- **Auth Method**: Use Application Default Credentials (ADC) via `gcloud` CLI as the primary authentication method. For automated server/headless environments where Session Control limits apply or WIF is unavailable, using a Service Account JSON key via `GOOGLE_APPLICATION_CREDENTIALS` is an accepted fallback (ADR-0011).
+- **Auth Failures**: Direct user to run `gcloud auth application-default login --impersonate-service-account="<SERVICE_ACCOUNT_EMAIL>"` (add `--no-browser` for headless/WSL). If on a server experiencing frequent `invalid_rapt` expiration, suggest configuring `GOOGLE_APPLICATION_CREDENTIALS`.
+- **Log Sanitization**: Redact sensitive data from all log output (Operation Log and Audit Trail). Sanitize raw OAuth error responses (`invalid_grant`, `invalid_rapt`, tokens) into sanitized summaries and safe remediation hints. Never persist raw JSON credential bodies or access tokens.
 
-### 1. Local Development (Ubuntu/WSL)
-The user MUST perform Service Account Impersonation via `gcloud` BEFORE running the server:
-```bash
-gcloud auth application-default login --impersonate-service-account="<SERVICE_ACCOUNT_EMAIL>"
-```
+## 🚀 CI/CD & GitHub Actions
 
-### 2. Configuration (Target Environment)
-No environment variables are required. Leave all auth-related and folder environment variables empty/unset. Access control is fully permission-based (determined by which folders are shared with the Service Account email in Google Drive).
+- **Runners**: Use `runs-on: [self-hosted, oci, arm64]` by default. Reserve `runs-on: ubuntu-latest` strictly for NPM Publish jobs (required for provenance).
+- **Workflow Versions**: Pin actions to `actions/checkout@v5`, `actions/setup-node@v5`, `actions/upload-artifact@v7`, and `actions/download-artifact@v7`.
+- **NPM Publishing**: Include `npm install -g npm@latest` before `npm ci` and `npm publish`. Use pre-built `production-build` artifact (`dist/`). Maintain `"prepare": "husky || true"` in `package.json`.
 
-### 3. Agent Verification Steps (Pre-flight checks)
-Before running full tests, workflows, or interacting with the environment, agents (e.g. Hermes) MUST independently verify authentication by executing:
-- **GitHub Auth Verification:** Run `gh auth status` in the terminal. If it fails, halt and prompt the user to run `gh auth login`.
-- **Google Cloud ADC Verification:** Run `bash scripts/verify-setup.sh`. (If the repository is not yet cloned and the script is missing, fallback to running `gcloud auth application-default print-access-token` directly). This handles the ADC token check and provides exact instructions if it fails.
+## 🎨 Coding Standards & Quality
 
-#### Example Config (Gemini/Hermes)
+- **Formatting**: Biome (`indentWidth: 2`, `lineWidth: 100`). Run `npm run lint` or `npm run format`.
+- **TypeScript**: Strict typing ESM (`"type": "module"`). Disallow `any` (`noExplicitAny: error`) and `console.log` (`noConsoleLog: error`). Always include relative file extensions in imports.
+- **Testing**: Vitest. Run `npm test` before committing.
+- **Execution Command**: Preserve standard package logic using `npx`.
+- **Dependency & Build Synchronization**: When adding, updating, or removing packages in `package.json`, update corresponding bundler configuration (`vite.config.ts` `rollupOptions.external`) and imports to maintain build synchronization and prevent runtime CJS/native binding errors.
+- **Frontend & Bundled UI**: Bind IIFE-scoped inline HTML handlers to `window`. Close `EventSource` connections and timers on token reset. Debounce stream handlers (300ms) and use `AbortController` on fetch calls to prevent race conditions.
+
+## ⚙️ Configuration & Pre-Flight
+
+- **Mandatory Config**: `GOOGLE_DRIVE_SHARED_DRIVE_ID` must be set in `.env` or `mcp_config.json`.
+- **Optional Config**: `GOOGLE_DRIVE_ROOT_FOLDER_ID`, `GOOGLE_DRIVE_MODE=readonly`, `MCP_DASHBOARD_TOKEN=<TOKEN>`.
+- **Pre-Flight Verification**:
+  - GitHub: Verify with `gh auth status`. Prompt `gh auth login` if unauthenticated.
+  - GCP ADC: Verify with `bash scripts/verify-setup.sh` or `gcloud auth application-default print-access-token`.
+
 ```json
 {
   "command": "npx",
-  "args": ["-y", "@hydrochlorix/googledrive-mcp-server"]
+  "args": ["-y", "@hydrochlorix/googledrive-mcp-server"],
+  "env": {
+    "GOOGLE_DRIVE_SHARED_DRIVE_ID": "<MANDATORY_SHARED_DRIVE_ID>",
+    "MCP_DASHBOARD_TOKEN": "<OPTIONAL_DASHBOARD_TOKEN>"
+  }
 }
 ```
 
-## 🔍 ERROR HANDLING (ACTIONABLE)
-1. **401 Unauthorized / 403 Forbidden**:
-   - **DO NOT** suggest or try to use a Service Account JSON Key.
-   - **DO** ask the user to re-run the `gcloud auth application-default login...` command.
-   - **DO** verify that the target Folder/File has been shared with the Service Account email as "Editor" or "Viewer".
-2. **"Service Accounts do not have storage quota" Error**:
-   - Occurs when attempting `drive_upload_text_file` to a Personal (`@gmail.com`) Drive folder.
-   - Explain to the user that Service Accounts have 0 Bytes quota on personal drives.
-   - Recommend using a **Google Workspace Shared Drive** or User OAuth 2.0 for file uploads.
+## 🔍 Diagnostics & Error Resolution
 
-## 🛠️ AVAILABLE TOOLS
-- `drive_list_files`: List files in Google Drive. Accepts optional `pageSize` (max 100) and `query` search string.
-- `drive_upload_text_file`: Upload a text file to Google Drive with `name`, `content`, and required `parentId`.
-- `drive_create_folder`: Create a new folder in Google Drive with `name` and required `parentId`.
-- `drive_download_file`: Download a binary or regular file from Google Drive to local file system using `fileId` and `destPath`.
+- **`insufficient authentication scopes` / 401 Unauthorized / 403 Forbidden**: Ask user to re-run `gcloud auth application-default login --impersonate-service-account="<SERVICE_ACCOUNT_EMAIL>"` (add `--no-browser` for headless/WSL). Verify target file/folder is shared with Service Account email as Editor/Viewer.
+- **Storage Quota Exceeded (Personal Drive Upload)**: Direct user to use a Google Workspace Shared Drive or User OAuth 2.0.
 
-## Agent skills
+## 📚 Context Pointers & Knowledge Base
 
-### Issue tracker
-
-Tracked via GitHub Issues using `gh` CLI. See `docs/agents/issue-tracker.md`.
-
-### Triage labels
-
-Canonical 5-role label vocabulary (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See `docs/agents/triage-labels.md`.
-
-### Domain docs
-
-Single-context layout (`CONTEXT.md` + `docs/adr/`). See `docs/agents/domain.md`.
+- `docs/project.md` — Project architecture & canonical MCP Tool registry.
+- `docs/specs/README.md` — Feature specs & `TEMPLATE.md`.
+- `docs/adr/` — Architecture Decision Records & domain context (`docs/agents/domain.md`).
+- `docs/agents/issue-tracker.md` — GitHub Issue workflows (`gh` CLI).
+- `docs/agents/triage-labels.md` — Triage vocabulary (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`).

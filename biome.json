@@ -26,6 +26,15 @@
     "lineWidth": 100
   },
   "files": {
-    "ignore": ["node_modules", "dist", "coverage", "package-lock.json"]
+    "ignore": [
+      "node_modules",
+      "dist",
+      "coverage",
+      "package-lock.json",
+      "src/audit",
+      "tests/audit",
+      "scripts",
+      "PROJECT.md"
+    ]
   }
 }

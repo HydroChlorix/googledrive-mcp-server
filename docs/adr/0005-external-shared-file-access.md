@@ -1,23 +1,31 @@
 # ADR 0005: External Shared File Access via URL-Gated Read-Only Tool
 
 ## Status
-Accepted
+
+Approved
 
 ## Context
-The MCP server enforces Root Folder Isolation (ADR-0002) for all existing tools. A new use case emerged: users receive Google Drive links from external parties (via Messenger, email, etc.) and want the AI agent to read those files. These files are "Anyone with the link can view" but live outside the Root Folder, so existing tools reject them.
+
+The V1 MCP server enforces the two-layer boundary in ADR-0009 for all standard tools. Real-world workflows require reading external Google Drive links provided directly by users. These files live outside the configured Shared Drive and Root Folder, requiring a separately governed capability.
 
 ## Decision
-We will add a new tool `get_file_from_url` that deliberately bypasses Root Folder Isolation under strict constraints:
-1. **URL-Gated**: The tool accepts only full Google Drive URLs, not bare file IDs. This prevents it from becoming an escape hatch for Root Folder bypass.
-2. **Read-only**: No create or update operations on external files.
-3. **Separate tool**: Implemented as a distinct tool rather than modifying `get_file_content`, keeping the existing security boundary untouched.
-4. **Auto-Text Export**: Reuses the same Google Workspace → plain text export logic (ADR-0003).
+
+Implement a dedicated tool `drive_download_file_from_url` operating under strict safety constraints:
+
+1. **Tool Name & Parameters**: `drive_download_file_from_url` accepting `url` (string) and `destPath` (string).
+2. **URL-Gated Only**: The tool parses file ID strictly from full Google Drive URLs (e.g. `https://drive.google.com/file/d/{id}/view`, `https://docs.google.com/document/d/{id}/edit`). Bare file IDs are rejected to prevent bypass of standard boundary checks.
+3. **Read-Only Local Download**: Downloads file content to `destPath`. Path traversal security enforced (must resolve within current working directory).
+4. **Auto-Text Export**: Reuses Workspace document conversion logic (ADR-0003) to export Docs/Sheets/Slides as `text/plain`.
+5. **No Shortcut Resolution**: If the target URL resolves to a Google Drive Shortcut, it is rejected (fail-closed) to preserve strict boundary predictability.
+6. **Resilience Integration**: Wrapped in `executeWithResilience` (isRead: true) sharing the global circuit breaker and admission queue.
 
 ## Considered Options
-- **Modify `get_file_content` to optionally skip Root Folder check** — rejected because it blurs the security boundary and makes the AI agent's tool selection ambiguous.
-- **Require file owners to share with Service Account** — rejected because it's impractical for ad-hoc link sharing from external parties.
+
+- **Modify `downloadFile` to optionally skip boundary checks** — rejected because it blurs the single-tenant boundary (ADR-0009).
+- **Return raw text payload directly in MCP response** — rejected in favor of consistent local file output matching `drive_download_file`.
 
 ## Consequences
-- **Positive:** AI agents can now read any link-shared Google Drive file the user provides, covering a common real-world workflow.
-- **Negative:** Introduces a tool that operates outside Root Folder Isolation. The URL-gating constraint mitigates but does not eliminate the expanded access surface.
-- **Neutral:** The Service Account can only read files that are "Anyone with the link" or explicitly shared with it — no privilege escalation occurs.
+
+- **Positive**: Enables safe, explicit reading of external link-shared Google Drive files without compromising standard tool boundary enforcement.
+- **Negative**: Adds an intentional seam operating outside the configured Shared Drive boundary.
+- **Neutral**: Limited strictly by Google Drive permissions granted to the link or Service Account.

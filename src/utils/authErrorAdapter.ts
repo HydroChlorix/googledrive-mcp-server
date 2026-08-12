@@ -1,5 +1,10 @@
 export function translateDriveError(error: unknown, actionName: string): Error {
-  const message = error instanceof Error ? error.message : String(error);
+  const message =
+    error instanceof Error
+      ? error.message
+      : typeof error === "object" && error !== null && "message" in error
+        ? String((error as { message: unknown }).message)
+        : String(error);
   const status =
     (error as { status?: number; code?: number })?.status ??
     (error as { status?: number; code?: number })?.code;
