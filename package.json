@@ -75,7 +75,7 @@
     "vitest": "^4.1.10"
   },
   "allowScripts": {
-    "@biomejs/biome": "true",
-    "esbuild": "true"
+    "@biomejs/biome": true,
+    "esbuild": true
   }
 }
